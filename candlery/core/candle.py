@@ -9,9 +9,12 @@ class Candle:
     high: float
     low: float
     close: float
-    volume: float
+    volume: int
 
     def __post_init__(self):
+        if self.timestamp.tzinfo is None:
+            raise ValueError("Candle timestamp must be timezone-aware (use UTC)")
+
         if self.high < self.low:
             raise ValueError("High cannot be less than Low")
 

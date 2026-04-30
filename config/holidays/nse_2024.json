@@ -1,0 +1,22 @@
+{
+  "exchange": "NSE",
+  "year": 2024,
+  "source": "https://www.nseindia.com/resources/exchange-communication-holidays",
+  "last_verified": "2026-04-30",
+  "holidays": [
+    {"date": "2024-01-26", "name": "Republic Day"},
+    {"date": "2024-03-08", "name": "Mahashivratri"},
+    {"date": "2024-03-25", "name": "Holi"},
+    {"date": "2024-03-29", "name": "Good Friday"},
+    {"date": "2024-04-11", "name": "Id-Ul-Fitr"},
+    {"date": "2024-04-17", "name": "Shri Ram Navami"},
+    {"date": "2024-05-01", "name": "Maharashtra Day"},
+    {"date": "2024-06-17", "name": "Bakri Id"},
+    {"date": "2024-07-17", "name": "Muharram"},
+    {"date": "2024-08-15", "name": "Independence Day"},
+    {"date": "2024-10-02", "name": "Mahatma Gandhi Jayanti"},
+    {"date": "2024-11-01", "name": "Diwali Laxmi Pujan"},
+    {"date": "2024-11-15", "name": "Gurunanak Jayanti"},
+    {"date": "2024-12-25", "name": "Christmas"}
+  ]
+}
