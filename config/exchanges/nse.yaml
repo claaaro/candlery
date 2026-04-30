@@ -1,0 +1,21 @@
+exchange: NSE
+timezone: Asia/Kolkata
+has_dst: false
+weekend_days: [5, 6]
+
+sessions:
+  pre_open:
+    start: "09:00"
+    end: "09:15"
+  continuous:
+    start: "09:15"
+    end: "15:30"
+  closing:
+    start: "15:40"
+    end: "16:00"
+
+data_availability:
+  bhavcopy_delay_hours: 3
+
+candle_convention:
+  daily_timestamp: market_open

@@ -1,0 +1,14 @@
+backtest:
+  name: sma_crossover_nifty50
+  strategy: sma_crossover
+  universe: nifty50
+  start_date: "2024-01-01"
+  end_date: "2026-04-30"
+  exchange: NSE
+  timeframe: 1d
+  risk_profile: risk
+  initial_capital: 500000
+
+strategy_params:
+  fast_period: 10
+  slow_period: 30
