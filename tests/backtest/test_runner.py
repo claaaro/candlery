@@ -103,16 +103,16 @@ class TestBacktestRunner:
             risk_engine=risk_engine,
         )
         
-        portfolio = runner.run()
+        result = runner.run()
         
         # Day 1: Buy 10 @ 100 -> Cash 9000, Pos 10
         # Day 2: Sell 10 @ 110 -> Cash 10100, Pos 0
         # Day 3: Buy 10 @ 120 -> Cash 8900, Pos 10
         
-        assert portfolio.cash == 8900.0
-        assert portfolio.positions["TEST"].quantity == 10
+        assert result.portfolio.cash == 8900.0
+        assert result.portfolio.positions["TEST"].quantity == 10
         # Total equity = cash (8900) + exposure (10 * 120 = 1200) = 10100
-        assert portfolio.get_total_equity({"TEST": 120.0}) == 10100.0
+        assert result.portfolio.get_total_equity({"TEST": 120.0}) == 10100.0
 
     def test_risk_limits_prevent_excessive_trades(self, risk_engine: RiskEngine) -> None:
         # Setup data
@@ -144,8 +144,8 @@ class TestBacktestRunner:
                 return TradeAction(symbol=symbol, signal=Signal.BUY, quantity=200)
                 
         runner.strategy = GreedyStrategy()
-        portfolio = runner.run()
+        result = runner.run()
         
         # Expected: Risk limits to 100 shares (10000 / 100).
-        assert portfolio.positions["TEST"].quantity == 100
-        assert portfolio.cash == 90000.0
+        assert result.portfolio.positions["TEST"].quantity == 100
+        assert result.portfolio.cash == 90000.0

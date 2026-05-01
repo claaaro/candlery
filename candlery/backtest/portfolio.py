@@ -113,17 +113,20 @@ class Portfolio:
         """Calculate total portfolio value (cash + exposure)."""
         return self.cash + self.get_total_exposure(current_prices)
 
-    def execute_trade(self, action: TradeAction, fill_price: float) -> None:
+    def execute_trade(self, action: TradeAction, fill_price: float) -> tuple[int, float]:
         """Execute a trade, updating cash and positions.
 
         Args:
             action: Approved TradeAction (must have positive quantity).
             fill_price: The execution price.
+            
+        Returns:
+            Tuple of (executed_quantity, realized_pnl).
         """
         if action.signal == Signal.HOLD:
-            return
+            return 0, 0.0
         if action.quantity <= 0:
-            return
+            return 0, 0.0
 
         symbol = action.symbol
         pos = self.positions.get(symbol)
@@ -141,7 +144,7 @@ class Portfolio:
                 )
                 cost = action.quantity * fill_price
                 if action.quantity <= 0:
-                    return
+                    return 0, 0.0
 
             if not pos:
                 pos = Position(symbol=symbol)
@@ -151,15 +154,16 @@ class Portfolio:
             pos.add(action.quantity, fill_price)
             self.daily_trades_count += 1
             logger.info(f"Executed BUY {action.quantity} {symbol} @ {fill_price}")
+            return action.quantity, 0.0
 
         elif action.signal == Signal.SELL:
             if not pos:
-                return
+                return 0, 0.0
                 
             # Can't sell more than we own (no short selling in Phase 1)
             sell_qty = min(action.quantity, pos.quantity)
             if sell_qty <= 0:
-                return
+                return 0, 0.0
                 
             proceeds = sell_qty * fill_price
             pnl = pos.remove(sell_qty, fill_price)
@@ -168,3 +172,6 @@ class Portfolio:
             self.daily_realized_pnl += pnl
             self.daily_trades_count += 1
             logger.info(f"Executed SELL {sell_qty} {symbol} @ {fill_price}. PnL: {pnl}")
+            return sell_qty, pnl
+            
+        return 0, 0.0

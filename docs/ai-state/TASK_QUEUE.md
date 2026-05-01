@@ -1,6 +1,6 @@
 # Task Queue
 
-**Last Updated:** 2026-05-01T04:23:00Z
+**Last Updated:** 2026-05-01T05:19:00Z
 
 ## Rules
 - Work top-to-bottom within each priority level
@@ -12,7 +12,6 @@
 
 | ID | Task | Deps | Status |
 |---|---|---|---|
-| T-010 | Performance metrics + journal | T-008 | **READY** |
 | T-011 | CLI entry point | T-008 | **READY** |
 
 ## P1 — This Phase
@@ -21,8 +20,6 @@
 
 ## P2 — Phase 1b
 
-| ID | Task | Deps | Status |
-|---|---|---|---|
 | T-012 | Static HTML report | T-010 | WAITING |
 | T-013 | GitHub Actions CI | All | WAITING |
 | T-014 | Cost model (STT, brokerage) | T-008 | WAITING |
@@ -40,4 +37,5 @@
 | T-009 | SMA crossover strategy | 2026-05-01 | antigravity |
 | T-007 | Risk engine | 2026-05-01 | antigravity |
 | T-008 | Backtest runner | 2026-05-01 | antigravity |
+| T-010 | Performance metrics | 2026-05-01 | antigravity |
 | — | Audit + package rename | 2026-04-30 | antigravity |

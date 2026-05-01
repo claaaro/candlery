@@ -58,7 +58,41 @@ import candlery.core.candle as candle     # ← import the class, not module
 | **Float for prices** | Accepted in Phase 1. Decimal migration at Phase 2. |
 | **Volume** | `int` (shares are whole numbers). |
 
-## 6. Validation Steps (Run Before Every Commit)
+## 6. TEST INTEGRITY RULE (CRITICAL)
+
+Tests are the source of truth.
+
+If a test fails:
+
+* NEVER modify the test to make it pass
+* ALWAYS fix the underlying code
+
+Only exception:
+
+* The test is provably incorrect (must explain clearly before changing)
+
+Default behavior:
+FAILURE → FIX CODE, NOT TEST
+
+If unsure:
+STOP and ask before modifying tests
+
+## 7. INCIDENT REFERENCE — T-008 Portfolio Bug
+
+A failure occurred where a position was created with quantity = 0 when insufficient cash was available.
+
+Initial instinct was to modify the test, but this was incorrect.
+
+Correct resolution:
+
+* Identified bug in portfolio execution logic
+* Fixed code to prevent position creation when trade does not execute
+* Re-ran tests successfully
+
+Lesson:
+Tests define correctness. Code must conform to tests.
+
+## 8. Validation Steps (Run Before Every Commit)
 
 ```bash
 cd /Users/charan/Documents/candlery-workspace/candlery
@@ -76,7 +110,7 @@ git check-ignore candlery/**/*.py tests/**/*.py
 git add -A && git status
 ```
 
-## 7. How to Resume Work
+## 9. How to Resume Work
 
 ```
 Step 1: git pull origin main
@@ -84,13 +118,13 @@ Step 2: Read docs/ai-state/CURRENT_STATE.md
 Step 3: Read docs/ai-state/TASK_QUEUE.md
 Step 4: Pick the first READY task
 Step 5: Implement full module + tests
-Step 6: Run validation (Section 6)
+Step 6: Run validation (Section 8)
 Step 7: Commit with [T-XXX] prefix
 Step 8: Update CURRENT_STATE.md and TASK_QUEUE.md
 Step 9: Push
 ```
 
-## 8. What NOT To Do
+## 10. What NOT To Do
 
 | Forbidden Action | Why |
 |---|---|
@@ -104,7 +138,7 @@ Step 9: Push
 | Use `data/` in .gitignore without `/` prefix | Matches `candlery/data/` and hides source code |
 | Install package with `pip install -e .` | Not needed — run from project root with `pythonpath = ["."]` |
 
-## 9. Next Task Pointer
+## 11. Next Task Pointer
 
 **Read `docs/ai-state/TASK_QUEUE.md` for current task list.**
 
@@ -116,7 +150,7 @@ THEN:        T-007 — Risk engine
 THEN:        T-009 — SMA crossover strategy
 ```
 
-## 10. Project Structure
+## 12. Project Structure
 
 ```
 candlery/                          ← project root
@@ -148,7 +182,7 @@ candlery/                          ← project root
 └── README.md
 ```
 
-## 11. Commit Message Format
+## 13. Commit Message Format
 
 ```
 [T-XXX] Short title

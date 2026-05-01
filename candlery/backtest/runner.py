@@ -7,10 +7,12 @@ from dataclasses import dataclass
 from datetime import date
 from typing import Any, Optional
 
+from candlery.backtest.metrics import BacktestMetrics, calculate_metrics
 from candlery.backtest.portfolio import Portfolio
 from candlery.core.candle import Candle
 from candlery.core.types import Signal, TradeAction
 from candlery.data.calendar import TradingCalendar
+from candlery.journal.store import ExecutedTrade
 from candlery.risk.engine import RiskEngine, RiskState
 from candlery.strategy.base import Strategy
 
@@ -24,6 +26,15 @@ class BacktestConfig:
     end_date: date
     initial_capital: float
     universe: set[str]
+
+
+@dataclass
+class BacktestResult:
+    """Result of a backtest run."""
+    portfolio: Portfolio
+    trades: list[ExecutedTrade]
+    daily_equity_curve: list[float]
+    metrics: BacktestMetrics
 
 
 class BacktestRunner:
@@ -49,10 +60,10 @@ class BacktestRunner:
         self.portfolio = Portfolio(initial_capital=config.initial_capital)
         self.history: dict[str, list[Candle]] = {s: [] for s in config.universe}
         
-        # We will collect daily equity curves and trade journals later,
-        # but for now we execute the loop.
+        self.trades: list[ExecutedTrade] = []
+        self.daily_equity_curve: list[float] = []
 
-    def run(self) -> Portfolio:
+    def run(self) -> BacktestResult:
         """Execute the backtest loop from start_date to end_date."""
         trading_days = self.calendar.trading_days_between(
             self.config.start_date, self.config.end_date
@@ -64,7 +75,19 @@ class BacktestRunner:
             self._process_day(day)
 
         logger.info("Backtest complete.")
-        return self.portfolio
+        
+        metrics = calculate_metrics(
+            self.config.initial_capital,
+            self.daily_equity_curve,
+            self.trades
+        )
+        
+        return BacktestResult(
+            portfolio=self.portfolio,
+            trades=self.trades,
+            daily_equity_curve=self.daily_equity_curve,
+            metrics=metrics,
+        )
 
     def _process_day(self, day: date) -> None:
         """Process a single trading day."""
@@ -72,13 +95,6 @@ class BacktestRunner:
         
         # 1. Load data for the day
         try:
-            # Importer interface: import_csv or import_date(day)?
-            # The BhavcopyImporter has `import_file` and `import_directory`.
-            # For backtesting, we assume the data provider has a method to get candles for a date.
-            # Let's assume `get_candles_for_date(day, universe)`
-            # Wait, BhavcopyImporter returns an ImportResult. We need a clean abstraction.
-            # For Phase 1, we expect the caller to wrap the importer into a provider
-            # that returns a dict of symbol -> Candle.
             daily_data = self.importer.get_candles_for_date(day, self.config.universe)
         except Exception as e:
             logger.error(f"Error loading data for {day}: {e}")
@@ -86,6 +102,9 @@ class BacktestRunner:
 
         if not daily_data:
             logger.debug(f"No data found for {day}.")
+            # Append yesterday's equity if we have no data, 
+            # but wait, if it's a valid trading day we should record it.
+            # Using current_prices from history would be better, but for MVP:
             return
 
         # Update price history and prepare current prices for portfolio evaluation
@@ -111,7 +130,6 @@ class BacktestRunner:
             action: Optional[TradeAction] = self.strategy.evaluate(symbol, symbol_history)
             
             if not action or action.signal == Signal.HOLD:
-                # If strategy says HOLD, but we want to sell all if we are out of data? No.
                 continue
 
             # Prepare RiskState
@@ -128,9 +146,21 @@ class BacktestRunner:
 
             if approved_action:
                 # 4. Execute the approved action at today's close price
-                # For Phase 1 MVP, we simulate EOD execution at the closing price.
-                self.portfolio.execute_trade(approved_action, fill_price=current_price)
+                exec_qty, pnl = self.portfolio.execute_trade(approved_action, fill_price=current_price)
                 
-                # Update current_prices and recalculate exposure/PnL after trade?
-                # The portfolio updates itself during execute_trade, but exposure relies on prices.
+                if exec_qty > 0:
+                    trade = ExecutedTrade(
+                        date=day,
+                        symbol=symbol,
+                        signal=approved_action.signal,
+                        quantity=exec_qty,
+                        price=current_price,
+                        realized_pnl=pnl,
+                    )
+                    self.trades.append(trade)
+                
+                # Update current_prices and recalculate exposure/PnL after trade
                 self.portfolio.update_unrealized_pnl(current_prices)
+
+        # Record daily equity curve after all trades for the day
+        self.daily_equity_curve.append(self.portfolio.get_total_equity(current_prices))
