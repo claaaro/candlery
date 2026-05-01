@@ -1,9 +1,9 @@
 # Candlery — Current State
 
-**Last Updated:** 2026-05-01T05:19:00Z
+**Last Updated:** 2026-05-01T06:09:00Z
 **Last Platform:** Google Antigravity
 **Current Phase:** Phase 1a — Backtesting MVP (CLI)
-**Phase Status:** In Progress (~90%)
+**Phase Status:** Complete (100%)
 
 ## Completed Tasks
 
@@ -17,12 +17,13 @@
 - [x] T-007: Risk engine (basic limits: exposure, position size, daily cap)
 - [x] T-008: Backtest runner (execution loop, portfolio tracking)
 - [x] T-010: Performance metrics + journal (Sharpe, MDD, trade logging)
+- [x] T-011: CLI entry point (argparse, YAML config loading, execution)
 - [x] AUDIT: Holiday data completed (2024–2026), type fixes, timezone enforcement
 - [x] REFACTOR: Package renamed src/ → candlery/, .gitignore fixed
 
-## Next Priority
+## Next Priority (Phase 1b)
 
-1. **T-011: CLI entry point** — READY
+1. **T-012: Static HTML report** — READY
 
 ## Architecture Summary
 
@@ -30,7 +31,7 @@
 - All timestamps: UTC, timezone-aware
 - Data models: frozen dataclasses in `candlery/core/`
 - Config: YAML (exchanges) + JSON (holidays) in `config/`
-- Tests: `tests/` mirror of `candlery/` — **108 tests passing**
+- Tests: `tests/` mirror of `candlery/` — **111 tests passing**
 
 ## Known Issues
 
@@ -52,6 +53,8 @@
 - `candlery/backtest/runner.py` — Core execution loop
 - `candlery/backtest/metrics.py` — Performance metrics
 - `candlery/journal/store.py` — Trade logging
+- `candlery/cli.py` & `candlery/__main__.py` — CLI entry point
+- `candlery/data/provider.py` — Backtest data provider
 - `config/exchanges/nse.yaml` — NSE market hours
 - `config/holidays/nse_202{4,5,6}.json` — Holiday calendars
 - `tests/data/test_calendar.py` — 25 tests
