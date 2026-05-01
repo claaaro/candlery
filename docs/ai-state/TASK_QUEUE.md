@@ -1,6 +1,6 @@
 # Task Queue
 
-**Last Updated:** 2026-05-01T04:12:00Z
+**Last Updated:** 2026-05-01T04:23:00Z
 
 ## Rules
 - Work top-to-bottom within each priority level
@@ -12,14 +12,12 @@
 
 | ID | Task | Deps | Status |
 |---|---|---|---|
-| T-008 | Backtest runner | T-005, T-006, T-007 | **READY** |
+| T-010 | Performance metrics + journal | T-008 | **READY** |
+| T-011 | CLI entry point | T-008 | **READY** |
 
 ## P1 — This Phase
 
-| ID | Task | Deps | Status |
-|---|---|---|---|
-| T-010 | Performance metrics + journal | T-008 | WAITING |
-| T-011 | CLI entry point | T-008 | WAITING |
+| T-012 | Static HTML report | T-010 | WAITING |
 
 ## P2 — Phase 1b
 
@@ -41,4 +39,5 @@
 | T-006 | Strategy interface + core types | 2026-05-01 | antigravity |
 | T-009 | SMA crossover strategy | 2026-05-01 | antigravity |
 | T-007 | Risk engine | 2026-05-01 | antigravity |
+| T-008 | Backtest runner | 2026-05-01 | antigravity |
 | — | Audit + package rename | 2026-04-30 | antigravity |

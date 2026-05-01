@@ -1,9 +1,9 @@
 # Candlery — Current State
 
-**Last Updated:** 2026-05-01T04:12:00Z
+**Last Updated:** 2026-05-01T04:23:00Z
 **Last Platform:** Google Antigravity
 **Current Phase:** Phase 1a — Backtesting MVP (CLI)
-**Phase Status:** In Progress (~60%)
+**Phase Status:** In Progress (~75%)
 
 ## Completed Tasks
 
@@ -15,14 +15,14 @@
 - [x] T-006: Strategy interface (abstract base + core types)
 - [x] T-009: SMA crossover strategy (reference implementation)
 - [x] T-007: Risk engine (basic limits: exposure, position size, daily cap)
+- [x] T-008: Backtest runner (execution loop, portfolio tracking)
 - [x] AUDIT: Holiday data completed (2024–2026), type fixes, timezone enforcement
 - [x] REFACTOR: Package renamed src/ → candlery/, .gitignore fixed
 
 ## Next Priority
 
-1. **T-008: Backtest runner** — READY (T-007 complete)
-2. T-010: Performance metrics + journal — WAITING (depends on T-008)
-3. T-011: CLI entry point — WAITING (depends on T-008)
+1. **T-010: Performance metrics + journal** — READY
+2. **T-011: CLI entry point** — READY
 
 ## Architecture Summary
 
@@ -30,7 +30,7 @@
 - All timestamps: UTC, timezone-aware
 - Data models: frozen dataclasses in `candlery/core/`
 - Config: YAML (exchanges) + JSON (holidays) in `config/`
-- Tests: `tests/` mirror of `candlery/` — **83 tests passing**
+- Tests: `tests/` mirror of `candlery/` — **102 tests passing**
 
 ## Known Issues
 
@@ -48,6 +48,8 @@
 - `candlery/strategy/base.py` — Abstract Strategy class
 - `candlery/strategy/sma_crossover.py` — SMA crossover (reference impl)
 - `candlery/risk/engine.py` — RiskEngine and RiskState
+- `candlery/backtest/portfolio.py` — Portfolio and Position tracking
+- `candlery/backtest/runner.py` — Core execution loop
 - `config/exchanges/nse.yaml` — NSE market hours
 - `config/holidays/nse_202{4,5,6}.json` — Holiday calendars
 - `tests/data/test_calendar.py` — 25 tests
