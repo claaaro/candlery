@@ -1,8 +1,6 @@
-# Candlery — Multi-platform handoff (paste-first message)
+# Candlery — handoff prompt (copy below)
 
-Use this as the **first message** when switching AI tools or models (Antigravity, Copilot, Cursor, etc.). Keep it short; the repo is the source of truth.
-
----
+Paste **everything inside the fenced block** as the first message on any new platform/model.
 
 ```
 You are continuing work on Candlery.
@@ -17,29 +15,19 @@ Before doing anything, run these four commands and read their output:
   cat docs/ai-state/SYSTEM_KEY.md
   cat docs/ai-state/CURRENT_STATE.md
 
-Then run:
-
-  make phase1a-smoke
+Then run:  make phase1a-smoke
 
 If it fails, fix what's broken. Do not start new features until it passes.
 
-If it passes, pick the next task from CURRENT_STATE.md / TASK_QUEUE.md (follow SYSTEM_KEY.md workflow).
+If it passes, pick the first READY task in docs/ai-state/CURRENT_STATE.md (see also docs/ai-state/TASK_QUEUE.md).
 
 Hard constraints:
 
-- You may NOT modify SYSTEM_KEY.md and .py files in the same commit.
+- You may NOT modify docs/ai-state/SYSTEM_KEY.md and .py files in the same commit.
 - You may NOT use MagicMock on a class whose name appears in the test filename.
 - You may NOT mark anything "complete" without `make phase1a-smoke` passing.
 
-That's the entire onboarding protocol. No long "strict environment" preamble — the repo enforces the rest.
+That's the entire onboarding protocol. No 200-line "strict environment" preamble. The repo enforces the rest.
 ```
 
----
-
-## Optional full verification
-
-After smoke passes:
-
-```bash
-python3 -m pytest tests/ -q
-```
+Architecture and phase boundaries: `docs/CONSTITUTION.md`.
