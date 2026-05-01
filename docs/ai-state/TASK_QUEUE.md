@@ -1,6 +1,6 @@
 # Task Queue
 
-**Last Updated:** 2026-05-01T00:16:00Z
+**Last Updated:** 2026-05-01T04:12:00Z
 
 ## Rules
 - Work top-to-bottom within each priority level
@@ -12,13 +12,12 @@
 
 | ID | Task | Deps | Status |
 |---|---|---|---|
-| T-007 | Risk engine (basic limits) | T-006 | **READY** |
+| T-008 | Backtest runner | T-005, T-006, T-007 | **READY** |
 
 ## P1 — This Phase
 
 | ID | Task | Deps | Status |
 |---|---|---|---|
-| T-008 | Backtest runner | T-005, T-006, T-007 | WAITING |
 | T-010 | Performance metrics + journal | T-008 | WAITING |
 | T-011 | CLI entry point | T-008 | WAITING |
 
@@ -41,4 +40,5 @@
 | T-003 | Bhavcopy importer | 2026-04-30 | antigravity |
 | T-006 | Strategy interface + core types | 2026-05-01 | antigravity |
 | T-009 | SMA crossover strategy | 2026-05-01 | antigravity |
+| T-007 | Risk engine | 2026-05-01 | antigravity |
 | — | Audit + package rename | 2026-04-30 | antigravity |
