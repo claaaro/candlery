@@ -3,9 +3,10 @@
 from __future__ import annotations
 
 import argparse
-from unittest.mock import MagicMock
+import json
 
 import pytest
+import yaml
 
 from candlery.cli import run_backtest
 
@@ -21,9 +22,11 @@ def test_cli_missing_config_raises_system_exit(tmp_path, monkeypatch) -> None:
 
 
 def test_cli_run_success(tmp_path, monkeypatch) -> None:
-    # 1. Create a dummy config structure
+    monkeypatch.chdir(tmp_path)
+
     config_file = tmp_path / "test_bt.yaml"
-    config_file.write_text('''
+    config_file.write_text(
+        """
 backtest:
   name: test
   strategy: sma_crossover
@@ -36,56 +39,67 @@ backtest:
 strategy_params:
   fast_period: 2
   slow_period: 5
-''')
+"""
+    )
 
-    # Create universe
     universes_dir = tmp_path / "universes"
     universes_dir.mkdir()
-    (universes_dir / "test_universe.yaml").write_text('''
+    (universes_dir / "test_universe.yaml").write_text(
+        """
 symbols:
   - TEST
-''')
+"""
+    )
 
-    # Create risk defaults
-    (tmp_path / "test_defaults.yaml").write_text('''
-max_position_size: 1000
-max_total_exposure: 5000
-max_trades_per_day: 5
-daily_loss_cap: 100
-''')
+    (tmp_path / "test_defaults.yaml").write_text(
+        """
+test:
+  max_position_size: 1000
+  max_total_exposure: 5000
+  max_trades_per_day: 5
+  daily_loss_cap: 100
+"""
+    )
+
+    config_dir = tmp_path / "config"
+    (config_dir / "exchanges").mkdir(parents=True)
+    (config_dir / "holidays").mkdir(parents=True)
+    (config_dir / "exchanges" / "nse.yaml").write_text(
+        yaml.dump(
+            {
+                "exchange": "NSE",
+                "timezone": "Asia/Kolkata",
+                "has_dst": False,
+                "weekend_days": [5, 6],
+                "sessions": {"continuous": {"start": "09:15", "end": "15:30"}},
+            }
+        )
+    )
+    (config_dir / "holidays" / "nse_2026.json").write_text(
+        json.dumps({"exchange": "NSE", "year": 2026, "holidays": []})
+    )
+
+    data_dir = tmp_path / "data"
+    data_dir.mkdir()
+    (data_dir / "day1.csv").write_text(
+        "\n".join(
+            [
+                "SYMBOL,SERIES,OPEN,HIGH,LOW,CLOSE,LAST,PREVCLOSE,TOTTRDQTY,TOTTRDVAL,TIMESTAMP,TOTALTRADES,ISIN,",
+                "TEST,EQ,100.00,110.00,95.00,105.00,104.00,98.00,50000,5000000,01-JAN-2026,1000,INE999Z01010,",
+                "",
+            ]
+        )
+    )
+    (data_dir / "day2.csv").write_text(
+        "\n".join(
+            [
+                "SYMBOL,SERIES,OPEN,HIGH,LOW,CLOSE,LAST,PREVCLOSE,TOTTRDQTY,TOTTRDVAL,TIMESTAMP,TOTALTRADES,ISIN,",
+                "TEST,EQ,105.00,112.00,101.00,108.00,107.00,105.00,50000,5000000,02-JAN-2026,1000,INE999Z01010,",
+                "",
+            ]
+        )
+    )
 
     args = argparse.Namespace(config=str(config_file), data_dir=str(tmp_path))
-
-    # 2. Mock dependencies
-    # We want to mock BacktestRunner to not actually do the heavy lifting,
-    # or mock DataProvider to return nothing. Let's just mock BacktestRunner.run
-    
-    mock_metrics = MagicMock()
-    mock_metrics.total_return_pct = 5.0
-    mock_metrics.max_drawdown_pct = 2.0
-    mock_metrics.win_rate_pct = 50.0
-    mock_metrics.sharpe_ratio = 1.2
-    mock_metrics.total_trades = 10
-    
-    mock_result = MagicMock()
-    mock_result.metrics = mock_metrics
-    mock_result.trades = []
-    mock_result.daily_equity_curve = [10000.0, 10500.0]
-    
-    mock_portfolio = MagicMock()
-    mock_portfolio.get_total_equity.return_value = 10500.0
-    mock_result.portfolio = mock_portfolio
-    
-    mock_runner_instance = MagicMock()
-    mock_runner_instance.run.return_value = mock_result
-    
-    monkeypatch.setattr("candlery.cli.BacktestRunner", MagicMock(return_value=mock_runner_instance))
-    
-    # We also need to mock BhavcopyDataProvider to not scan directories
-    monkeypatch.setattr("candlery.cli.BhavcopyDataProvider", MagicMock())
-    
-    # 3. Execute
+    args = argparse.Namespace(config=str(config_file), data_dir=str(data_dir))
     run_backtest(args)
-    
-    # If we get here without SystemExit, it worked.
-    mock_runner_instance.run.assert_called_once()

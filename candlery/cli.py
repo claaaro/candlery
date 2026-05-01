@@ -56,18 +56,25 @@ def run_backtest(args: argparse.Namespace) -> None:
     # 3. Load risk profile
     risk_profile_name = bt_params["risk_profile"]
     risk_path = config_path.parent / f"{risk_profile_name}_defaults.yaml"
-    # Actually example says "risk_profile: risk", and the file is risk_defaults.yaml.
     if not risk_path.exists():
         logger.error(f"Risk profile not found: {risk_path}")
         sys.exit(1)
-        
-    risk_data = _load_yaml(risk_path)
+
+    risk_file_data = _load_yaml(risk_path)
+    risk_data = risk_file_data.get(risk_profile_name)
+    if not isinstance(risk_data, dict):
+        logger.error(
+            "Risk profile key '%s' missing in %s",
+            risk_profile_name,
+            risk_path,
+        )
+        sys.exit(1)
     
     # 4. Initialize components
     calendar = TradingCalendar(exchange=bt_params["exchange"])
     
     logger.info(f"Loading data from {args.data_dir}...")
-    provider = BhavcopyDataProvider(args.data_dir, start_date, end_date)
+    provider = BhavcopyDataProvider(args.data_dir, start_date, end_date, calendar)
     
     strategy = SMACrossover(fast_period=strategy_params.get("fast_period", 10),
                             slow_period=strategy_params.get("slow_period", 30))
@@ -101,10 +108,10 @@ def run_backtest(args: argparse.Namespace) -> None:
     print(f"Win Rate:       {result.metrics.win_rate_pct:.2f}%")
     print(f"Sharpe Ratio:   {result.metrics.sharpe_ratio:.2f}")
     print(f"Total Trades:   {result.metrics.total_trades}")
-    print(f"Final Equity:   {result.portfolio.get_total_equity({}):.2f}") # Approximation, we don't have current prices here, but cash might be mostly it. Wait, the portfolio equity should be exact.
-    # We should get the last equity from the curve.
     if result.daily_equity_curve:
         print(f"Final Equity:   {result.daily_equity_curve[-1]:.2f}")
+    else:
+        print(f"Final Equity:   {config.initial_capital:.2f}")
     print("="*50)
     
     if result.trades:

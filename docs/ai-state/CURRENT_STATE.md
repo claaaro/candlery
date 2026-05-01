@@ -1,7 +1,7 @@
 # Candlery — Current State
 
-**Last Updated:** 2026-05-01T06:09:00Z
-**Last Platform:** Google Antigravity
+**Last Updated:** 2026-05-01T21:20:00Z
+**Last Platform:** Cursor
 **Current Phase:** Phase 1a — Backtesting MVP (CLI)
 **Phase Status:** Complete (100%)
 
@@ -18,6 +18,10 @@
 - [x] T-008: Backtest runner (execution loop, portfolio tracking)
 - [x] T-010: Performance metrics + journal (Sharpe, MDD, trade logging)
 - [x] T-011: CLI entry point (argparse, YAML config loading, execution)
+- [x] REPAIR: Phase 1a integration wiring fixed (provider calendar dependency + risk profile mapping)
+- [x] REPAIR: Mock-heavy integration tests replaced with real wiring tests
+- [x] REPAIR: Phase 1a smoke test gate added (`make phase1a-smoke`)
+- [x] REPAIR: CI pipeline added (pytest + smoke gate)
 - [x] AUDIT: Holiday data completed (2024–2026), type fixes, timezone enforcement
 - [x] REFACTOR: Package renamed src/ → candlery/, .gitignore fixed
 
@@ -31,11 +35,10 @@
 - All timestamps: UTC, timezone-aware
 - Data models: frozen dataclasses in `candlery/core/`
 - Config: YAML (exchanges) + JSON (holidays) in `config/`
-- Tests: `tests/` mirror of `candlery/` — **111 tests passing**
+- Tests: `tests/` mirror of `candlery/` — **112 tests passing**
 
 ## Known Issues
 
-- No integration tests yet (unit tests only)
 - Corporate actions not handled (documented gap)
 - `float` used for prices (Decimal migration deferred to Phase 2)
 

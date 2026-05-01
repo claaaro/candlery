@@ -1,83 +1,64 @@
 # Candlery
 
-Institutional-grade algorithmic trading platform focused on deterministic backtesting, risk-first architecture, and scalable system design.
+Institutional-grade algorithmic trading platform under phased delivery:
+Backtest -> Reporting -> Complex Markets -> Forex -> Live Execution.
 
----
+## Current Scope
 
-## 🚀 Current Status
+- Phase: **Phase 1a (EOD Equity Backtesting MVP)**
+- Interface: **CLI only**
+- Market: **NSE equities (Bhavcopy CSV)**
+- Internal time standard: **UTC timezone-aware datetimes**
 
-- Phase: **Phase 1a — Backtesting MVP (CLI)**
-- Scope: **Equity EOD (NIFTY 50)**
-- Data Source: **NSE Bhavcopy**
-- Timezone: **UTC (internal)**
+## Architecture Invariants
 
----
+- Core models are immutable frozen dataclasses.
+- Strategy emits signals only.
+- Portfolio tracks state only.
+- RiskEngine validates and gates actions only.
+- Trading runtime path is deterministic code (no LLM in hot path).
+- Prices are `float` in Phase 1 with a planned `Decimal` migration path.
 
-## 🧠 Architecture Principles
+See `docs/CONSTITUTION.md` for the durable architecture and phase-lock rules.
 
-- Deterministic trading core (no AI in execution path)
-- Risk-first system design
-- Config-driven behavior (no hardcoding)
-- Modular architecture (strategy / risk / data separation)
-- AI-assisted development with structured state tracking
+## Repository Layout
 
----
-
-## 📁 Project Structure
 ```
-src/ → Core system (data, strategy, risk, backtest)
-config/ → Configurations (risk, exchange, universe)
-docs/ → System design & specifications
-tests/ → Unit tests
-data/ → Local data (not committed)
-```
----
-
-## 🤖 AI Development Workflow
-
-This project supports multi-platform AI development:
-
-- Google Antigravity
-- Cursor
-- GitHub Copilot
-
-All sessions MUST use:
-```
-docs/ai-state/
+candlery/               # Python package
+  core/                 # Candle, Instrument, types
+  data/                 # calendar, importer, provider
+  strategy/             # strategy interfaces and implementations
+  risk/                 # risk firewall
+  backtest/             # runner, portfolio, metrics
+  journal/              # executed trade journal
+tests/                  # mirrors package modules + smoke tests
+config/                 # exchanges, holidays, risk profiles, universes
+docs/                   # constitution and ai-state
 ```
 
-Start from:
+## Local Development
 
-- CURRENT_STATE.md
-- TASK_QUEUE.md
+Run from project root:
 
----
+```bash
+python3 -m pytest tests/ -q
+make phase1a-smoke
+```
 
-## ⚠️ Important Rules
+Both commands must pass before treating work as complete.
 
-- Do NOT commit raw data
-- Do NOT modify architecture without decision record
-- Follow Phase 1 scope strictly (no intraday, no F&O)
+## Data Notes
 
----
+- Do not commit raw market data.
+- Keep local CSV input under a non-committed data directory.
+- `.gitignore` intentionally uses `/data/` (anchored) to avoid hiding `candlery/data/`.
 
-## 📚 Documentation
+## AI Session Restart
 
-See:
+For cross-platform continuation, start with:
 
-- docs/PROJECT_SPEC.md
-- docs/DATA_STRATEGY.md
-- docs/TIMEZONE_AND_MARKET.md
-- docs/PHASE1_SCOPE.md
+- `docs/ai-state/SYSTEM_KEY.md`
+- `docs/ai-state/CURRENT_STATE.md`
+- `docs/ai-state/TASK_QUEUE.md`
 
----
-
-## 🏁 Getting Started
-
-(Will be added after initial setup)
-
----
-
-## 📌 Status
-
-Repository bootstrapping in progress.
+The repository is the source of truth; chat memory is not.
