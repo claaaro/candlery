@@ -10,6 +10,7 @@ from pathlib import Path
 
 import yaml
 
+from candlery.backtest.costs import transaction_cost_model_from_mapping
 from candlery.backtest.runner import BacktestConfig, BacktestRunner
 from candlery.data.calendar import TradingCalendar
 from candlery.data.provider import BhavcopyDataProvider
@@ -86,6 +87,7 @@ def run_backtest(args: argparse.Namespace) -> None:
         end_date=end_date,
         initial_capital=bt_params.get("initial_capital", 100000.0),
         universe=universe,
+        cost_model=transaction_cost_model_from_mapping(bt_params.get("costs")),
     )
     
     runner = BacktestRunner(

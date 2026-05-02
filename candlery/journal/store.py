@@ -18,7 +18,8 @@ class ExecutedTrade:
     quantity: int
     price: float
     realized_pnl: float
-    
+    fees: float = 0.0
+
     @property
     def value(self) -> float:
         """Total value of the transaction."""

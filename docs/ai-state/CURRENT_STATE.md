@@ -1,6 +1,6 @@
 # Candlery — Current State
 
-**Last Updated:** 2026-05-01T22:30:00Z
+**Last Updated:** 2026-05-01T23:45:00Z
 **Last Platform:** Cursor
 **Current Phase:** Phase 1b — Reporting (HTML tear sheet)
 **Phase Status:** In progress
@@ -19,6 +19,7 @@
 - [x] T-010: Performance metrics + journal (Sharpe, MDD, trade logging)
 - [x] T-011: CLI entry point (argparse, YAML config loading, execution)
 - [x] T-012: Static HTML tear sheet (`candlery backtest --html`, `candlery.reporting.html`)
+- [x] T-014: Transaction costs — `TransactionCostModel`, YAML `backtest.costs` (bps per leg), `ExecutedTrade.fees`, HTML fees column
 - [x] REPAIR: Phase 1a integration wiring fixed (provider calendar dependency + risk profile mapping)
 - [x] REPAIR: Mock-heavy integration tests replaced with real wiring tests
 - [x] REPAIR: Phase 1a smoke test gate added (`make phase1a-smoke`)
@@ -28,8 +29,8 @@
 
 ## Next Priority (Phase 1b)
 
-1. **T-014: Cost model (STT, brokerage)** — READY
-2. **T-013: GitHub Actions CI** — when workflow token/scope is available
+1. **T-013: GitHub Actions CI** — when workflow token/scope is available (optional)
+2. Broader reporting polish / round-trip analytics as needed
 
 ## Architecture Summary
 
@@ -37,7 +38,7 @@
 - All timestamps: UTC, timezone-aware
 - Data models: frozen dataclasses in `candlery/core/`
 - Config: YAML (exchanges) + JSON (holidays) in `config/`
-- Tests: `tests/` mirror of `candlery/` — **115 tests passing**
+- Tests: `tests/` mirror of `candlery/` — **124 tests passing**
 
 ## Known Issues
 
@@ -57,6 +58,7 @@
 - `candlery/backtest/portfolio.py` — Portfolio and Position tracking
 - `candlery/backtest/runner.py` — Core execution loop
 - `candlery/backtest/metrics.py` — Performance metrics
+- `candlery/backtest/costs.py` — STT/brokerage turnover model (bps or fractions)
 - `candlery/journal/store.py` — Trade logging
 - `candlery/cli.py` & `candlery/__main__.py` — CLI entry point (`--html` tear sheet)
 - `candlery/reporting/html.py` — static HTML report

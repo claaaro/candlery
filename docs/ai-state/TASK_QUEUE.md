@@ -1,6 +1,6 @@
 # Task Queue
 
-**Last Updated:** 2026-05-01T22:30:00Z
+**Last Updated:** 2026-05-01T23:45:00Z
 
 ## Rules
 - Work top-to-bottom within each priority level
@@ -12,11 +12,7 @@
 
 | ID | Task | Deps | Status |
 |---|---|---|---|
-| T-014 | Cost model (STT, brokerage) | T-008 | **READY** |
-
-## P1 — Phase 1b
-
-| T-013 | GitHub Actions CI | Phase 1b stable | WAITING |
+| T-013 | GitHub Actions CI | PAT `workflow` scope (optional) | WAITING |
 
 ## Completed
 
@@ -34,4 +30,5 @@
 | T-010 | Performance metrics | 2026-05-01 | antigravity |
 | T-011 | CLI entry point | 2026-05-01 | antigravity |
 | T-012 | Static HTML report (`--html`, `candlery.reporting`) | 2026-05-01 | cursor |
+| T-014 | Transaction costs (STT + brokerage, YAML `costs`, journal fees) | 2026-05-01 | cursor |
 | — | Audit + package rename | 2026-04-30 | antigravity |

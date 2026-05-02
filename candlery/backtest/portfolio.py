@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass, field
 
+from candlery.backtest.costs import TransactionCostModel
 from candlery.core.types import Signal, TradeAction
 
 logger = logging.getLogger(__name__)
@@ -62,6 +63,7 @@ class Portfolio:
     """Tracks cash, positions, and performance during a backtest."""
 
     initial_capital: float
+    cost_model: TransactionCostModel = field(default_factory=TransactionCostModel)
     cash: float = field(init=False)
     positions: dict[str, Position] = field(default_factory=dict, init=False)
     
@@ -113,7 +115,7 @@ class Portfolio:
         """Calculate total portfolio value (cash + exposure)."""
         return self.cash + self.get_total_exposure(current_prices)
 
-    def execute_trade(self, action: TradeAction, fill_price: float) -> tuple[int, float]:
+    def execute_trade(self, action: TradeAction, fill_price: float) -> tuple[int, float, float]:
         """Execute a trade, updating cash and positions.
 
         Args:
@@ -121,57 +123,78 @@ class Portfolio:
             fill_price: The execution price.
             
         Returns:
-            Tuple of (executed_quantity, realized_pnl).
+            Tuple of (executed_quantity, realized_pnl, fees).
+
+            *Buy*: ``realized_pnl`` is always ``0``; ``fees`` is STT + brokerage on the buy leg.
+            *Sell*: ``realized_pnl`` is **net** of sell-side fees; ``fees`` is STT + brokerage
+            on the sell leg.
         """
         if action.signal == Signal.HOLD:
-            return 0, 0.0
+            return 0, 0.0, 0.0
         if action.quantity <= 0:
-            return 0, 0.0
+            return 0, 0.0, 0.0
 
         symbol = action.symbol
         pos = self.positions.get(symbol)
+        buy_rate = self.cost_model.buy_fee_fraction()
 
         if action.signal == Signal.BUY:
-            cost = action.quantity * fill_price
-            if cost > self.cash:
-                logger.warning(f"Insufficient cash to buy {action.quantity} {symbol}. Cash: {self.cash}, Cost: {cost}")
-                # Partial fill
+            eff_price = fill_price * (1.0 + buy_rate)
+            if eff_price <= 0:
+                return 0, 0.0, 0.0
+            max_affordable = int(self.cash / eff_price)
+            if action.quantity > max_affordable:
+                if max_affordable <= 0:
+                    return 0, 0.0, 0.0
+                logger.warning(
+                    "Insufficient cash to buy %s %s (incl. fees). Filling %s.",
+                    action.quantity,
+                    symbol,
+                    max_affordable,
+                )
                 action = TradeAction(
                     symbol=action.symbol,
                     signal=action.signal,
-                    quantity=int(self.cash / fill_price),
-                    reason=action.reason + " [Partial Fill due to cash]"
+                    quantity=max_affordable,
+                    reason=action.reason + " [Partial Fill due to cash]",
                 )
-                cost = action.quantity * fill_price
-                if action.quantity <= 0:
-                    return 0, 0.0
+
+            notional = action.quantity * fill_price
+            fees = self.cost_model.buy_fees(notional)
+            total_out = notional + fees
+            if total_out > self.cash + 1e-9:
+                return 0, 0.0, 0.0
 
             if not pos:
                 pos = Position(symbol=symbol)
                 self.positions[symbol] = pos
 
-            self.cash -= cost
+            self.cash -= total_out
             pos.add(action.quantity, fill_price)
             self.daily_trades_count += 1
-            logger.info(f"Executed BUY {action.quantity} {symbol} @ {fill_price}")
-            return action.quantity, 0.0
+            logger.info(f"Executed BUY {action.quantity} {symbol} @ {fill_price} (fees {fees:.2f})")
+            return action.quantity, 0.0, fees
 
         elif action.signal == Signal.SELL:
             if not pos:
-                return 0, 0.0
+                return 0, 0.0, 0.0
                 
             # Can't sell more than we own (no short selling in Phase 1)
             sell_qty = min(action.quantity, pos.quantity)
             if sell_qty <= 0:
-                return 0, 0.0
+                return 0, 0.0, 0.0
                 
-            proceeds = sell_qty * fill_price
-            pnl = pos.remove(sell_qty, fill_price)
-            
-            self.cash += proceeds
-            self.daily_realized_pnl += pnl
+            notional = sell_qty * fill_price
+            fees = self.cost_model.sell_fees(notional)
+            gross_pnl = pos.remove(sell_qty, fill_price)
+            net_pnl = gross_pnl - fees
+
+            self.cash += notional - fees
+            self.daily_realized_pnl += net_pnl
             self.daily_trades_count += 1
-            logger.info(f"Executed SELL {sell_qty} {symbol} @ {fill_price}. PnL: {pnl}")
-            return sell_qty, pnl
+            logger.info(
+                f"Executed SELL {sell_qty} {symbol} @ {fill_price}. Gross PnL: {gross_pnl}, fees: {fees:.2f}"
+            )
+            return sell_qty, net_pnl, fees
             
-        return 0, 0.0
+        return 0, 0.0, 0.0

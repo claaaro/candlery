@@ -56,9 +56,10 @@ def render_html_report(
             f"<td>{t.quantity}</td>"
             f"<td>{t.price:.4f}</td>"
             f"<td>{t.realized_pnl:.2f}</td>"
+            f"<td>{t.fees:.2f}</td>"
             "</tr>"
         )
-    trades_body = "\n".join(trade_rows) if trade_rows else "<tr><td colspan='6'>No trades</td></tr>"
+    trades_body = "\n".join(trade_rows) if trade_rows else "<tr><td colspan='7'>No trades</td></tr>"
 
     doc = f"""<!DOCTYPE html>
 <html lang="en">
@@ -105,7 +106,7 @@ def render_html_report(
     <h2>Trades</h2>
     <table>
       <thead>
-        <tr><th>Date</th><th>Symbol</th><th>Signal</th><th>Qty</th><th>Price</th><th>Realized PnL</th></tr>
+        <tr><th>Date</th><th>Symbol</th><th>Signal</th><th>Qty</th><th>Price</th><th>Realized PnL</th><th>Fees</th></tr>
       </thead>
       <tbody>
         {trades_body}

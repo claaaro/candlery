@@ -5,7 +5,7 @@ Backtest -> Reporting -> Complex Markets -> Forex -> Live Execution.
 
 ## Current Scope
 
-- Phase: **Phase 1b (reporting)** — HTML tear sheet from `candlery backtest --html report.html`
+- Phase: **Phase 1b (reporting)** — HTML tear sheet; optional **transaction costs** via `backtest.costs` in YAML (see `config/example_backtest.yaml`)
 - Phase 1a (EOD backtesting MVP): **complete** (CLI + smoke gate)
 - Interface: **CLI only**
 - Market: **NSE equities (Bhavcopy CSV)**

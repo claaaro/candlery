@@ -8,6 +8,12 @@ backtest:
   timeframe: 1d
   risk_profile: risk
   initial_capital: 500000
+  # Optional — STT + brokerage as basis points of turnover per leg (Phase 1b).
+  # costs:
+  #   stt_buy_bps: 10
+  #   stt_sell_bps: 10
+  #   brokerage_buy_bps: 3
+  #   brokerage_sell_bps: 3
 
 strategy_params:
   fast_period: 10

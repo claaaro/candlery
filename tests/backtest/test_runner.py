@@ -6,7 +6,7 @@ from datetime import date, datetime, timezone
 
 import pytest
 
-from candlery.backtest.portfolio import Portfolio
+from candlery.backtest.costs import TransactionCostModel
 from candlery.backtest.runner import BacktestConfig, BacktestRunner
 from candlery.core.candle import Candle
 from candlery.core.types import Signal, TradeAction
@@ -149,3 +149,29 @@ class TestBacktestRunner:
         # Expected: Risk limits to 100 shares (10000 / 100).
         assert result.portfolio.positions["TEST"].quantity == 100
         assert result.portfolio.cash == 90000.0
+
+    def test_run_applies_transaction_costs(self, risk_engine: RiskEngine) -> None:
+        data = {
+            date(2026, 1, 1): {"TEST": make_candle(1, 100.0)},
+            date(2026, 1, 2): {"TEST": make_candle(2, 110.0)},
+            date(2026, 1, 3): {"TEST": make_candle(3, 120.0)},
+        }
+        costs = TransactionCostModel.from_bps(stt_buy_bps=10, stt_sell_bps=10)
+        config = BacktestConfig(
+            start_date=date(2026, 1, 1),
+            end_date=date(2026, 1, 3),
+            initial_capital=10000.0,
+            universe={"TEST"},
+            cost_model=costs,
+        )
+        runner = BacktestRunner(
+            config=config,
+            calendar=MockTradingCalendar(),
+            importer=MockDataImporter(data),
+            strategy=AlternatingStrategy(),
+            risk_engine=risk_engine,
+        )
+        result = runner.run()
+        assert result.portfolio.cash == pytest.approx(8896.7)
+        sells = [t for t in result.trades if t.signal == Signal.SELL]
+        assert sells and sells[0].fees > 0

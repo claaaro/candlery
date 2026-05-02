@@ -3,10 +3,11 @@
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import date
 from typing import Any, Optional
 
+from candlery.backtest.costs import TransactionCostModel
 from candlery.backtest.metrics import BacktestMetrics, calculate_metrics
 from candlery.backtest.portfolio import Portfolio
 from candlery.core.candle import Candle
@@ -26,6 +27,7 @@ class BacktestConfig:
     end_date: date
     initial_capital: float
     universe: set[str]
+    cost_model: TransactionCostModel = field(default_factory=TransactionCostModel)
 
 
 @dataclass
@@ -57,7 +59,10 @@ class BacktestRunner:
         self.strategy = strategy
         self.risk_engine = risk_engine
         
-        self.portfolio = Portfolio(initial_capital=config.initial_capital)
+        self.portfolio = Portfolio(
+            initial_capital=config.initial_capital,
+            cost_model=config.cost_model,
+        )
         self.history: dict[str, list[Candle]] = {s: [] for s in config.universe}
         
         self.trades: list[ExecutedTrade] = []
@@ -146,8 +151,10 @@ class BacktestRunner:
 
             if approved_action:
                 # 4. Execute the approved action at today's close price
-                exec_qty, pnl = self.portfolio.execute_trade(approved_action, fill_price=current_price)
-                
+                exec_qty, pnl, fees = self.portfolio.execute_trade(
+                    approved_action, fill_price=current_price
+                )
+
                 if exec_qty > 0:
                     trade = ExecutedTrade(
                         date=day,
@@ -156,6 +163,7 @@ class BacktestRunner:
                         quantity=exec_qty,
                         price=current_price,
                         realized_pnl=pnl,
+                        fees=fees,
                     )
                     self.trades.append(trade)
                 

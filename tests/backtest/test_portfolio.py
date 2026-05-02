@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import pytest
 
+from candlery.backtest.costs import TransactionCostModel
 from candlery.backtest.portfolio import Portfolio, Position
 from candlery.core.types import Signal, TradeAction
 
@@ -176,3 +177,41 @@ class TestPortfolio:
         assert pf.get_position_value("TEST", current_prices["TEST"]) == 1500.0
         assert pf.get_total_exposure(current_prices) == 1500.0
         assert pf.get_total_equity(current_prices) == 10500.0  # 9000 cash + 1500 exposure
+
+    def test_buy_and_sell_apply_fees(self) -> None:
+        costs = TransactionCostModel.from_bps(
+            stt_buy_bps=10,
+            brokerage_buy_bps=0,
+            stt_sell_bps=10,
+            brokerage_sell_bps=0,
+        )
+        pf = Portfolio(initial_capital=10_000.0, cost_model=costs)
+        q, pnl, buy_fee = pf.execute_trade(
+            TradeAction(symbol="TEST", signal=Signal.BUY, quantity=10),
+            fill_price=100.0,
+        )
+        assert q == 10
+        assert pnl == 0.0
+        assert buy_fee == pytest.approx(1.0)  # 0.1% of 1000
+        assert pf.cash == pytest.approx(8999.0)
+
+        pf.reset_daily_stats()
+        q2, net_pnl, sell_fee = pf.execute_trade(
+            TradeAction(symbol="TEST", signal=Signal.SELL, quantity=10),
+            fill_price=110.0,
+        )
+        assert q2 == 10
+        assert sell_fee == pytest.approx(1.1)  # 0.1% of 1100
+        assert net_pnl == pytest.approx(98.9)  # gross 100 - fees
+        assert pf.cash == pytest.approx(8999.0 + 1100.0 - 1.1)
+
+    def test_partial_fill_accounts_for_buy_fees(self) -> None:
+        costs = TransactionCostModel(brokerage_on_buy=0.01)  # 1% on buy
+        pf = Portfolio(initial_capital=1000.0, cost_model=costs)
+        pf.execute_trade(
+            TradeAction(symbol="TEST", signal=Signal.BUY, quantity=15),
+            fill_price=100.0,
+        )
+        # eff 101/share -> floor(1000/101) = 9 shares; notional 900, fees 9
+        assert pf.positions["TEST"].quantity == 9
+        assert pf.cash == pytest.approx(91.0)
