@@ -49,6 +49,8 @@ make phase1a-smoke
 
 Both commands must pass before treating work as complete.
 
+On GitHub, the same checks run via **Actions** on pushes and pull requests to `main` (see `.github/workflows/ci.yml`). If your PAT rejected workflow file updates when pushing, grant the **`workflow`** scope once or push this file via SSH.
+
 ## Data Notes
 
 - Do not commit raw market data.

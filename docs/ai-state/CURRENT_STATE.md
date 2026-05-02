@@ -1,6 +1,6 @@
 # Candlery — Current State
 
-**Last Updated:** 2026-05-01T23:45:00Z
+**Last Updated:** 2026-05-02T00:00:00Z
 **Last Platform:** Cursor
 **Current Phase:** Phase 1b — Reporting (HTML tear sheet)
 **Phase Status:** In progress
@@ -23,14 +23,13 @@
 - [x] REPAIR: Phase 1a integration wiring fixed (provider calendar dependency + risk profile mapping)
 - [x] REPAIR: Mock-heavy integration tests replaced with real wiring tests
 - [x] REPAIR: Phase 1a smoke test gate added (`make phase1a-smoke`)
-- [x] REPAIR: GitHub Actions CI deferred (workflow scope / optional; see T-013)
+- [x] T-013: GitHub Actions CI — `.github/workflows/ci.yml` (Python 3.11, `make test` + `make phase1a-smoke` on push/PR to `main`)
 - [x] AUDIT: Holiday data completed (2024–2026), type fixes, timezone enforcement
 - [x] REFACTOR: Package renamed src/ → candlery/, .gitignore fixed
 
 ## Next Priority (Phase 1b)
 
-1. **T-013: GitHub Actions CI** — when workflow token/scope is available (optional)
-2. Broader reporting polish / round-trip analytics as needed
+1. Broader reporting polish / round-trip analytics as needed
 
 ## Architecture Summary
 

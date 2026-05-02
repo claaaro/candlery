@@ -1,0 +1,32 @@
+# T-013 — CI: full pytest suite + Phase 1a smoke gate (matches Makefile).
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install package and dev dependencies
+        run: pip install -e ".[dev]"
+
+      - name: Full test suite
+        run: make test
+
+      - name: Phase 1a smoke gate
+        run: make phase1a-smoke
