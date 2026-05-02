@@ -119,6 +119,20 @@ def run_backtest(args: argparse.Namespace) -> None:
         for t in result.trades[-5:]:
             print(f"  {t.date} | {t.signal.name:4s} | {t.symbol:10s} | QTY: {t.quantity:4d} | PNL: {t.realized_pnl:.2f}")
 
+    html_path = getattr(args, "html", None)
+    if html_path:
+        from candlery.reporting.html import write_html_report
+
+        write_html_report(
+            html_path,
+            result,
+            title=config_path.stem,
+            start_date=start_date,
+            end_date=end_date,
+            universe_size=len(universe),
+        )
+        logger.info("Wrote HTML report to %s", html_path)
+
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Candlery Algorithmic Trading Platform")
@@ -128,6 +142,12 @@ def main() -> None:
     bt_parser = subparsers.add_parser("backtest", help="Run a backtest simulation")
     bt_parser.add_argument("--config", required=True, help="Path to backtest YAML config")
     bt_parser.add_argument("--data-dir", default="data", help="Directory containing Bhavcopy CSVs")
+    bt_parser.add_argument(
+        "--html",
+        default=None,
+        metavar="PATH",
+        help="Write static HTML tear sheet to this path after the run",
+    )
     
     args = parser.parse_args()
     

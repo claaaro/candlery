@@ -5,7 +5,8 @@ Backtest -> Reporting -> Complex Markets -> Forex -> Live Execution.
 
 ## Current Scope
 
-- Phase: **Phase 1a (EOD Equity Backtesting MVP)**
+- Phase: **Phase 1b (reporting)** — HTML tear sheet from `candlery backtest --html report.html`
+- Phase 1a (EOD backtesting MVP): **complete** (CLI + smoke gate)
 - Interface: **CLI only**
 - Market: **NSE equities (Bhavcopy CSV)**
 - Internal time standard: **UTC timezone-aware datetimes**
@@ -30,6 +31,7 @@ candlery/               # Python package
   strategy/             # strategy interfaces and implementations
   risk/                 # risk firewall
   backtest/             # runner, portfolio, metrics
+  reporting/            # HTML tear sheets
   journal/              # executed trade journal
 tests/                  # mirrors package modules + smoke tests
 config/                 # exchanges, holidays, risk profiles, universes
