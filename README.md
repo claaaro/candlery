@@ -51,6 +51,12 @@ Both commands must pass before treating work as complete.
 
 On GitHub, the same checks run via **Actions** on pushes and pull requests to `main` (see `.github/workflows/ci.yml`). If your PAT rejected workflow file updates when pushing, grant the **`workflow`** scope once or push this file via SSH.
 
+Backtest report outputs:
+
+- HTML tear sheet: `candlery backtest --config config/example_backtest.yaml --html reports/run.html`
+- CSV bundle: `candlery backtest --config config/example_backtest.yaml --csv reports/run1`
+  - writes `reports/run1_summary.csv`, `reports/run1_trades.csv`, `reports/run1_equity.csv`
+
 ## Commit Identity Guardrails
 
 Candlery enforces a single commit identity and blocks co-author/agent attribution text.

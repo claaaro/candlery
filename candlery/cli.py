@@ -135,6 +135,25 @@ def run_backtest(args: argparse.Namespace) -> None:
         )
         logger.info("Wrote HTML report to %s", html_path)
 
+    csv_prefix = getattr(args, "csv", None)
+    if csv_prefix:
+        from candlery.reporting.csv import write_csv_bundle
+
+        out = write_csv_bundle(
+            csv_prefix,
+            result,
+            title=config_path.stem,
+            start_date=start_date,
+            end_date=end_date,
+            universe_size=len(universe),
+        )
+        logger.info(
+            "Wrote CSV report bundle: %s, %s, %s",
+            out["summary"],
+            out["trades"],
+            out["equity"],
+        )
+
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Candlery Algorithmic Trading Platform")
@@ -149,6 +168,12 @@ def main() -> None:
         default=None,
         metavar="PATH",
         help="Write static HTML tear sheet to this path after the run",
+    )
+    bt_parser.add_argument(
+        "--csv",
+        default=None,
+        metavar="PATH_PREFIX",
+        help="Write CSV bundle (<prefix>_summary/trades/equity.csv)",
     )
     
     args = parser.parse_args()

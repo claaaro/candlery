@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import json
+from pathlib import Path
 
 import pytest
 import yaml
@@ -100,6 +101,14 @@ test:
         )
     )
 
-    args = argparse.Namespace(config=str(config_file), data_dir=str(tmp_path))
-    args = argparse.Namespace(config=str(config_file), data_dir=str(data_dir))
+    csv_prefix = tmp_path / "out" / "candlery_run"
+    args = argparse.Namespace(
+        config=str(config_file),
+        data_dir=str(data_dir),
+        csv=str(csv_prefix),
+    )
     run_backtest(args)
+
+    assert Path(str(csv_prefix) + "_summary.csv").exists()
+    assert Path(str(csv_prefix) + "_trades.csv").exists()
+    assert Path(str(csv_prefix) + "_equity.csv").exists()

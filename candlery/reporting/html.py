@@ -31,6 +31,13 @@ def render_html_report(
 
     initial = result.portfolio.initial_capital
     final_eq = result.daily_equity_curve[-1] if result.daily_equity_curve else initial
+    total_fees = sum(t.fees for t in result.trades)
+    sell_trades = [t for t in result.trades if t.signal.name == "SELL"]
+    winning_sells = [t for t in sell_trades if t.realized_pnl > 0]
+    losing_sells = [t for t in sell_trades if t.realized_pnl < 0]
+    gross_realized = sum(t.realized_pnl for t in sell_trades)
+    avg_win = sum(t.realized_pnl for t in winning_sells) / len(winning_sells) if winning_sells else 0.0
+    avg_loss = sum(t.realized_pnl for t in losing_sells) / len(losing_sells) if losing_sells else 0.0
 
     metrics_rows = "\n".join(
         [
@@ -41,10 +48,42 @@ def render_html_report(
             f"<tr><th>Win rate</th><td>{m.win_rate_pct:.2f}%</td></tr>",
             f"<tr><th>Sharpe (annualized)</th><td>{m.sharpe_ratio:.4f}</td></tr>",
             f"<tr><th>Total trades (fills)</th><td>{m.total_trades}</td></tr>",
+            f"<tr><th>Total fees</th><td>{total_fees:,.2f}</td></tr>",
+            f"<tr><th>Realized PnL (sells, net)</th><td>{gross_realized:,.2f}</td></tr>",
+        ]
+    )
+    trade_stats_rows = "\n".join(
+        [
+            f"<tr><th>Sell trades</th><td>{len(sell_trades)}</td></tr>",
+            f"<tr><th>Winning sells</th><td>{len(winning_sells)}</td></tr>",
+            f"<tr><th>Losing sells</th><td>{len(losing_sells)}</td></tr>",
+            f"<tr><th>Average winning sell PnL</th><td>{avg_win:,.2f}</td></tr>",
+            f"<tr><th>Average losing sell PnL</th><td>{avg_loss:,.2f}</td></tr>",
         ]
     )
 
     chart_block = _equity_chart_svg(result.daily_equity_curve)
+    drawdown_series = _drawdown_series_pct(result.daily_equity_curve)
+    latest_drawdown = drawdown_series[-1] if drawdown_series else 0.0
+    max_drawdown = max(drawdown_series) if drawdown_series else 0.0
+    drawdown_chart = _drawdown_chart_svg(drawdown_series)
+    top_drawdowns = _top_drawdown_events(result.daily_equity_curve, top_n=3)
+    drawdown_rows = []
+    for i, event in enumerate(top_drawdowns, start=1):
+        drawdown_rows.append(
+            "<tr>"
+            f"<td>{i}</td>"
+            f"<td>{event['peak_idx']}</td>"
+            f"<td>{event['trough_idx']}</td>"
+            f"<td>{event['bars_to_trough']}</td>"
+            f"<td>{event['drawdown_pct']:.2f}%</td>"
+            "</tr>"
+        )
+    drawdown_table_body = (
+        "\n".join(drawdown_rows)
+        if drawdown_rows
+        else "<tr><td colspan='5'>No drawdown events</td></tr>"
+    )
 
     trade_rows = []
     for t in result.trades:
@@ -96,10 +135,36 @@ def render_html_report(
   </section>
 
   <section>
+    <h2>Trade Analytics</h2>
+    <table>
+      {trade_stats_rows}
+    </table>
+  </section>
+
+  <section>
     <h2>Equity curve</h2>
     <div class="chart-wrap">
       {chart_block}
     </div>
+  </section>
+
+  <section>
+    <h2>Drawdowns</h2>
+    <table>
+      <tr><th>Latest drawdown</th><td>{latest_drawdown:.2f}%</td></tr>
+      <tr><th>Max drawdown (from equity curve)</th><td>{max_drawdown:.2f}%</td></tr>
+    </table>
+    <div class="chart-wrap">
+      {drawdown_chart}
+    </div>
+    <table>
+      <thead>
+        <tr><th>#</th><th>Peak idx</th><th>Trough idx</th><th>Bars to trough</th><th>Drawdown</th></tr>
+      </thead>
+      <tbody>
+        {drawdown_table_body}
+      </tbody>
+    </table>
   </section>
 
   <section>
@@ -143,6 +208,72 @@ def _equity_chart_svg(equity: list[float], width: int = 720, height: int = 240) 
         f'<polyline fill="none" stroke="#2563eb" stroke-width="2" points="{points_attr}"/>'
         f"</svg>"
     )
+
+
+def _drawdown_series_pct(equity: list[float]) -> list[float]:
+    if not equity:
+        return []
+    peak = equity[0]
+    series: list[float] = []
+    for v in equity:
+        if v > peak:
+            peak = v
+        dd = ((peak - v) / peak) * 100.0 if peak > 0 else 0.0
+        series.append(dd)
+    return series
+
+
+def _drawdown_chart_svg(drawdowns: list[float], width: int = 720, height: int = 180) -> str:
+    if len(drawdowns) < 2:
+        return "<p>Not enough equity observations to plot drawdowns.</p>"
+    mx = max(drawdowns)
+    if mx <= 0:
+        return "<p>No drawdowns observed.</p>"
+    pad_x, pad_y = 12.0, 12.0
+    inner_w = width - 2 * pad_x
+    inner_h = height - 2 * pad_y
+    n = len(drawdowns)
+    pts = []
+    for i, dd in enumerate(drawdowns):
+        x = pad_x + inner_w * (i / (n - 1))
+        y = pad_y + inner_h * (dd / mx)
+        pts.append(f"{x:.2f},{y:.2f}")
+    points_attr = " ".join(pts)
+    return (
+        f'<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}" '
+        f'role="img" aria-label="Drawdown curve">'
+        f'<rect width="100%" height="100%" fill="#fafafa"/>'
+        f'<polyline fill="none" stroke="#dc2626" stroke-width="2" points="{points_attr}"/>'
+        f"</svg>"
+    )
+
+
+def _top_drawdown_events(equity: list[float], top_n: int = 3) -> list[dict[str, float | int]]:
+    if len(equity) < 2:
+        return []
+    peak_idx = 0
+    peak_val = equity[0]
+    events: list[dict[str, float | int]] = []
+    for i, v in enumerate(equity):
+        if v > peak_val:
+            peak_val = v
+            peak_idx = i
+            continue
+        if peak_val <= 0:
+            continue
+        dd = ((peak_val - v) / peak_val) * 100.0
+        if dd <= 0:
+            continue
+        events.append(
+            {
+                "peak_idx": peak_idx,
+                "trough_idx": i,
+                "bars_to_trough": i - peak_idx,
+                "drawdown_pct": dd,
+            }
+        )
+    events.sort(key=lambda e: float(e["drawdown_pct"]), reverse=True)
+    return events[:top_n]
 
 
 def write_html_report(
