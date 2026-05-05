@@ -51,6 +51,28 @@ Both commands must pass before treating work as complete.
 
 On GitHub, the same checks run via **Actions** on pushes and pull requests to `main` (see `.github/workflows/ci.yml`). If your PAT rejected workflow file updates when pushing, grant the **`workflow`** scope once or push this file via SSH.
 
+## Commit Identity Guardrails
+
+Candlery enforces a single commit identity and blocks co-author/agent attribution text.
+
+Run once per clone:
+
+```bash
+make setup-hooks
+```
+
+This installs a local `commit-msg` guard (versioned in `.githooks/`) and configures:
+
+- `git config core.hooksPath .githooks`
+
+Manual check:
+
+```bash
+make check-identity
+```
+
+CI also enforces these rules on pushed commits via `scripts/check_commit_identity.sh`.
+
 ## Data Notes
 
 - Do not commit raw market data.

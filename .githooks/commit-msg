@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+msg_file="$1"
+expected_name="claaaro"
+expected_email="274381829+claaaro@users.noreply.github.com"
+
+if grep -Eiq 'co-authored-by:|cursoragent|cursor <|@cursor\.com' "${msg_file}"; then
+  echo "ERROR: commit message contains forbidden attribution text."
+  echo "Remove Co-authored-by/Cursor references and retry."
+  exit 1
+fi
+
+name="$(git config user.name || true)"
+email="$(git config user.email || true)"
+if [[ "${name}" != "${expected_name}" || "${email}" != "${expected_email}" ]]; then
+  echo "ERROR: git identity must be ${expected_name} <${expected_email}> for this repo."
+  echo "Run:"
+  echo "  git config user.name \"${expected_name}\""
+  echo "  git config user.email \"${expected_email}\""
+  exit 1
+fi
