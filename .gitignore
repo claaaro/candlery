@@ -4,7 +4,20 @@ __pycache__/
 .env
 
 /data/
+data_real/
+data_real_raw/
 outputs/
+reports/
+
+# Research-only generated configs
+config/wf_*.yaml
+config/lg_*.yaml
+config/rd_*.yaml
+config/sweep_*.yaml
+config/vcb_*.yaml
+config/confirm_*.yaml
+config/grid_*.yaml
+config/tmp_grid/
 
 *.db
 .DS_Store

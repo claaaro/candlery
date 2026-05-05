@@ -107,6 +107,38 @@ class TestSMACrossoverConstruction:
         with pytest.raises(ValueError, match="periods must be positive"):
             SMACrossover(fast_period=-5, slow_period=10)
 
+    def test_invalid_trend_filter_period_raises(self) -> None:
+        with pytest.raises(ValueError, match="trend_filter_period must be positive"):
+            SMACrossover(fast_period=5, slow_period=20, trend_filter_period=0)
+
+    def test_negative_min_trend_strength_raises(self) -> None:
+        with pytest.raises(ValueError, match="min_trend_strength_pct must be non-negative"):
+            SMACrossover(fast_period=5, slow_period=20, min_trend_strength_pct=-0.1)
+
+    def test_invalid_atr_filter_period_raises(self) -> None:
+        with pytest.raises(ValueError, match="atr_filter_period must be positive"):
+            SMACrossover(fast_period=5, slow_period=20, atr_filter_period=0)
+
+    def test_negative_min_atr_raises(self) -> None:
+        with pytest.raises(ValueError, match="min_atr_pct must be non-negative"):
+            SMACrossover(fast_period=5, slow_period=20, min_atr_pct=-0.1)
+
+    def test_negative_cooldown_raises(self) -> None:
+        with pytest.raises(ValueError, match="cooldown_bars must be non-negative"):
+            SMACrossover(fast_period=5, slow_period=20, cooldown_bars=-1)
+
+    def test_invalid_trailing_stop_lookback_raises(self) -> None:
+        with pytest.raises(ValueError, match="trailing_stop_lookback must be positive"):
+            SMACrossover(fast_period=5, slow_period=20, trailing_stop_lookback=0)
+
+    def test_invalid_trailing_stop_atr_period_raises(self) -> None:
+        with pytest.raises(ValueError, match="trailing_stop_atr_period must be positive"):
+            SMACrossover(fast_period=5, slow_period=20, trailing_stop_atr_period=0)
+
+    def test_negative_trailing_stop_atr_mult_raises(self) -> None:
+        with pytest.raises(ValueError, match="trailing_stop_atr_mult must be non-negative"):
+            SMACrossover(fast_period=5, slow_period=20, trailing_stop_atr_mult=-1)
+
 
 # ---------------------------------------------------------------
 # SMA Crossover — Signal Logic
@@ -177,3 +209,105 @@ class TestSMACrossoverSignals:
         result = s.evaluate("RELIANCE", candles)
         assert "2" in result.reason
         assert "3" in result.reason
+
+    def test_trend_filter_blocks_buy_when_price_below_trend_sma(self) -> None:
+        s = SMACrossover(
+            fast_period=2,
+            slow_period=3,
+            trend_filter_period=4,
+            min_trend_strength_pct=0.1,
+        )
+        candles = _candle_series([100, 95, 95, 98])
+        # fast_prev=95, slow_prev=96.67 ; fast_now=96.5, slow_now=96 -> buy cross
+        # trend_sma(4)=97, close=98 is above trend and strong enough, so should pass
+        result = s.evaluate("TEST", candles)
+        assert result is not None
+        assert result.signal == Signal.BUY
+
+        blocked = SMACrossover(
+            fast_period=2,
+            slow_period=3,
+            trend_filter_period=4,
+            min_trend_strength_pct=5.0,
+        )
+        blocked_result = blocked.evaluate("TEST", candles)
+        assert blocked_result is None
+
+    def test_trend_filter_blocks_sell_when_price_above_trend_sma(self) -> None:
+        s = SMACrossover(
+            fast_period=2,
+            slow_period=3,
+            trend_filter_period=4,
+            min_trend_strength_pct=0.1,
+        )
+        candles = _candle_series([100, 105, 105, 102])
+        # fast_prev=105, slow_prev=103.33 ; fast_now=103.5, slow_now=104 -> sell cross
+        # trend_sma(4)=103, close=102 below trend and strong enough, so should pass
+        result = s.evaluate("TEST", candles)
+        assert result is not None
+        assert result.signal == Signal.SELL
+
+    def test_atr_filter_blocks_signal_when_volatility_too_low(self) -> None:
+        candles = _candle_series([100, 100, 100, 110])
+        blocked = SMACrossover(
+            fast_period=2,
+            slow_period=3,
+            atr_filter_period=3,
+            min_atr_pct=10.0,
+        )
+        assert blocked.evaluate("TEST", candles) is None
+
+    def test_atr_filter_allows_signal_when_threshold_is_reasonable(self) -> None:
+        candles = _candle_series([100, 100, 100, 110])
+        allowed = SMACrossover(
+            fast_period=2,
+            slow_period=3,
+            atr_filter_period=3,
+            min_atr_pct=1.0,
+        )
+        result = allowed.evaluate("TEST", candles)
+        assert result is not None
+        assert result.signal == Signal.BUY
+
+    def test_cooldown_blocks_immediate_flip_signal(self) -> None:
+        # BUY cross at day 4, then SELL cross at day 5 should be blocked by cooldown.
+        candles = _candle_series([100, 100, 100, 110, 80])
+        no_cooldown = SMACrossover(fast_period=2, slow_period=3, cooldown_bars=0)
+        assert no_cooldown.evaluate("TEST", candles) is not None
+        cooldown = SMACrossover(fast_period=2, slow_period=3, cooldown_bars=2)
+        assert cooldown.evaluate("TEST", candles) is None
+
+    def test_cooldown_allows_signal_after_wait_period(self) -> None:
+        # Prior crossover is old enough, so current crossover can pass.
+        candles = _candle_series([100, 100, 100, 110, 120, 130, 90])
+        cooldown = SMACrossover(fast_period=2, slow_period=3, cooldown_bars=2)
+        result = cooldown.evaluate("TEST", candles)
+        assert result is not None
+        assert result.signal == Signal.SELL
+
+    def test_trailing_stop_triggers_sell(self) -> None:
+        candles = _candle_series([100, 105, 110, 108, 103])
+        s = SMACrossover(
+            fast_period=2,
+            slow_period=3,
+            trailing_stop_lookback=4,
+            trailing_stop_atr_period=3,
+            trailing_stop_atr_mult=1.0,
+        )
+        result = s.evaluate("TEST", candles)
+        assert result is not None
+        assert result.signal == Signal.SELL
+        assert "trailing stop" in result.reason.lower()
+
+    def test_trailing_stop_not_triggered_when_above_level(self) -> None:
+        candles = _candle_series([100, 105, 110, 108, 109])
+        s = SMACrossover(
+            fast_period=2,
+            slow_period=3,
+            trailing_stop_lookback=4,
+            trailing_stop_atr_period=3,
+            trailing_stop_atr_mult=1.0,
+        )
+        result = s.evaluate("TEST", candles)
+        assert result is not None
+        assert "trailing stop" not in result.reason.lower()

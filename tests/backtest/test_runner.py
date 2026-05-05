@@ -57,6 +57,19 @@ class AlternatingStrategy(Strategy):
             return TradeAction(symbol=symbol, signal=Signal.SELL, quantity=10)
 
 
+class HistoryRecorderStrategy(Strategy):
+    def __init__(self) -> None:
+        self.lengths: list[int] = []
+
+    @property
+    def name(self) -> str:
+        return "HistoryRecorder"
+
+    def evaluate(self, symbol: str, candles: list[Candle]) -> TradeAction | None:
+        self.lengths.append(len(candles))
+        return None
+
+
 @pytest.fixture
 def risk_engine() -> RiskEngine:
     config = {
@@ -175,3 +188,83 @@ class TestBacktestRunner:
         assert result.portfolio.cash == pytest.approx(8896.7)
         sells = [t for t in result.trades if t.signal == Signal.SELL]
         assert sells and sells[0].fees > 0
+
+    def test_strategy_receives_incremental_history_only(self, risk_engine: RiskEngine) -> None:
+        data = {
+            date(2026, 1, 1): {"TEST": make_candle(1, 100.0)},
+            date(2026, 1, 2): {"TEST": make_candle(2, 101.0)},
+            date(2026, 1, 3): {"TEST": make_candle(3, 102.0)},
+        }
+        strategy = HistoryRecorderStrategy()
+        config = BacktestConfig(
+            start_date=date(2026, 1, 1),
+            end_date=date(2026, 1, 3),
+            initial_capital=10000.0,
+            universe={"TEST"},
+        )
+        runner = BacktestRunner(
+            config=config,
+            calendar=MockTradingCalendar(),
+            importer=MockDataImporter(data),
+            strategy=strategy,
+            risk_engine=risk_engine,
+        )
+        runner.run()
+        assert strategy.lengths == [1, 2, 3]
+
+    def test_execution_fill_uses_same_day_close(self, risk_engine: RiskEngine) -> None:
+        data = {
+            date(2026, 1, 1): {"TEST": make_candle(1, 100.0)},
+            date(2026, 1, 2): {"TEST": make_candle(2, 110.0)},
+        }
+        config = BacktestConfig(
+            start_date=date(2026, 1, 1),
+            end_date=date(2026, 1, 2),
+            initial_capital=10000.0,
+            universe={"TEST"},
+        )
+        runner = BacktestRunner(
+            config=config,
+            calendar=MockTradingCalendar(),
+            importer=MockDataImporter(data),
+            strategy=AlwaysBuyStrategy(),
+            risk_engine=risk_engine,
+        )
+        result = runner.run()
+        assert result.trades
+        assert result.trades[0].price == 100.0
+
+    def test_runner_uses_injected_scheduler_days(self, risk_engine: RiskEngine) -> None:
+        # Calendar would return 3 days, but scheduler is injected to return only 2 days.
+        class MockScheduler:
+            def __init__(self, days: list[date]) -> None:
+                self._days = days
+
+            def trading_days_between(self, start_date: date, end_date: date) -> list[date]:
+                return self._days
+
+        days = [date(2026, 1, 2), date(2026, 1, 3)]
+        data = {
+            date(2026, 1, 1): {"TEST": make_candle(1, 100.0)},
+            date(2026, 1, 2): {"TEST": make_candle(2, 101.0)},
+            date(2026, 1, 3): {"TEST": make_candle(3, 102.0)},
+        }
+        config = BacktestConfig(
+            start_date=date(2026, 1, 1),
+            end_date=date(2026, 1, 3),
+            initial_capital=10000.0,
+            universe={"TEST"},
+        )
+        runner = BacktestRunner(
+            config=config,
+            calendar=MockTradingCalendar(),
+            importer=MockDataImporter(data),
+            strategy=AlwaysBuyStrategy(),
+            risk_engine=risk_engine,
+            scheduler=MockScheduler(days=days),
+        )
+        result = runner.run()
+
+        # AlwaysBuyStrategy buys 10 shares per processed day.
+        assert result.portfolio.positions["TEST"].quantity == 20
+        assert len(result.trades) == 2

@@ -5,8 +5,8 @@ Backtest -> Reporting -> Complex Markets -> Forex -> Live Execution.
 
 ## Current Scope
 
-- Phase: **Phase 1b (reporting)** — HTML tear sheet; optional **transaction costs** via `backtest.costs` in YAML (see `config/example_backtest.yaml`)
-- Phase 1a (EOD backtesting MVP): **complete** (CLI + smoke gate)
+- Phase 1 foundation (EOD backtesting + reporting + costs + strict validation gate): **complete**
+- Phase 2 strategy research on current daily dataset: **closed with null result** (see `docs/ai-state/PHASE2_NULL_RESULT_NOTE.md`)
 - Interface: **CLI only**
 - Market: **NSE equities (Bhavcopy CSV)**
 - Internal time standard: **UTC timezone-aware datetimes**
@@ -57,6 +57,10 @@ Backtest report outputs:
 - CSV bundle: `candlery backtest --config config/example_backtest.yaml --csv reports/run1`
   - writes `reports/run1_summary.csv`, `reports/run1_trades.csv`, `reports/run1_equity.csv`
 
+Paper-mode (journaled, resumable) output:
+
+- `candlery paper --config config/example_backtest.yaml --data-dir data_real --journal reports/paper_run.jsonl --run-id demo --resume --csv reports/paper_demo`
+
 ## End-of-Phase Validation Gate
 
 Before marking a phase complete, run this lightweight checklist:
@@ -75,6 +79,13 @@ Before marking a phase complete, run this lightweight checklist:
    - better / worse / inconclusive and why
 
 Use this gate for system-validation confidence; do not infer production strategy quality from tiny/synthetic datasets.
+
+For full closeout context and decisions:
+
+- `docs/ai-state/VALIDATION_GATE_REPORT.md`
+- `docs/ai-state/PHASE2_DECISION_MEMO.md`
+- `docs/ai-state/PHASE2_SCOPE_MEMO.md`
+- `docs/ai-state/PHASE2_NULL_RESULT_NOTE.md`
 
 ## Commit Identity Guardrails
 

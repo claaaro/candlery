@@ -5,7 +5,7 @@ from __future__ import annotations
 import argparse
 import logging
 import sys
-from datetime import datetime
+from datetime import date, datetime
 from pathlib import Path
 
 import yaml
@@ -14,8 +14,10 @@ from candlery.backtest.costs import transaction_cost_model_from_mapping
 from candlery.backtest.runner import BacktestConfig, BacktestRunner
 from candlery.data.calendar import TradingCalendar
 from candlery.data.provider import BhavcopyDataProvider
+from candlery.journal.run_journal import RunJournal
 from candlery.risk.engine import RiskEngine
 from candlery.strategy.sma_crossover import SMACrossover
+from candlery.strategy.volatility_breakout import VolatilityBreakout
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 logger = logging.getLogger("candlery.cli")
@@ -26,8 +28,12 @@ def _load_yaml(path: Path) -> dict:
         return yaml.safe_load(f)
 
 
-def run_backtest(args: argparse.Namespace) -> None:
-    """Run a backtest from a configuration file."""
+def _build_runner_from_args(
+    args: argparse.Namespace,
+    *,
+    with_journal: bool = False,
+) -> tuple[BacktestRunner, Path, set[str], date, date]:
+    """Build a BacktestRunner and shared context from CLI args."""
     config_path = Path(args.config)
     if not config_path.exists():
         logger.error(f"Config file not found: {config_path}")
@@ -77,8 +83,31 @@ def run_backtest(args: argparse.Namespace) -> None:
     logger.info(f"Loading data from {args.data_dir}...")
     provider = BhavcopyDataProvider(args.data_dir, start_date, end_date, calendar)
     
-    strategy = SMACrossover(fast_period=strategy_params.get("fast_period", 10),
-                            slow_period=strategy_params.get("slow_period", 30))
+    strategy_name = bt_params.get("strategy", "sma_crossover")
+    if strategy_name == "sma_crossover":
+        strategy = SMACrossover(
+            fast_period=strategy_params.get("fast_period", 10),
+            slow_period=strategy_params.get("slow_period", 30),
+            trend_filter_period=strategy_params.get("trend_filter_period"),
+            min_trend_strength_pct=strategy_params.get("min_trend_strength_pct", 0.0),
+            atr_filter_period=strategy_params.get("atr_filter_period"),
+            min_atr_pct=strategy_params.get("min_atr_pct", 0.0),
+            cooldown_bars=strategy_params.get("cooldown_bars", 0),
+            trailing_stop_lookback=strategy_params.get("trailing_stop_lookback"),
+            trailing_stop_atr_period=strategy_params.get("trailing_stop_atr_period"),
+            trailing_stop_atr_mult=strategy_params.get("trailing_stop_atr_mult", 0.0),
+        )
+    elif strategy_name == "volatility_breakout":
+        strategy = VolatilityBreakout(
+            breakout_lookback=strategy_params.get("breakout_lookback", 20),
+            atr_period=strategy_params.get("atr_period", 14),
+            max_atr_pct=strategy_params.get("max_atr_pct", 3.0),
+            volume_lookback=strategy_params.get("volume_lookback", 20),
+            min_volume_ratio=strategy_params.get("min_volume_ratio", 1.2),
+        )
+    else:
+        logger.error("Unsupported strategy: %s", strategy_name)
+        sys.exit(1)
                             
     risk_engine = RiskEngine(risk_data)
     
@@ -89,22 +118,43 @@ def run_backtest(args: argparse.Namespace) -> None:
         universe=universe,
         cost_model=transaction_cost_model_from_mapping(bt_params.get("costs")),
     )
-    
+
+    runner_kwargs: dict[str, object] = {}
+    if with_journal:
+        run_id = getattr(args, "run_id", None) or config_path.stem
+        journal_path = getattr(args, "journal", None)
+        if not journal_path:
+            journal_path = f"reports/paper_{run_id}.jsonl"
+        runner_kwargs = {
+            "journal": RunJournal(journal_path),
+            "run_id": run_id,
+            "resume_from_journal": bool(getattr(args, "resume", False)),
+        }
+
     runner = BacktestRunner(
         config=config,
         calendar=calendar,
         importer=provider,
         strategy=strategy,
         risk_engine=risk_engine,
+        **runner_kwargs,
     )
-    
-    # 5. Run
-    result = runner.run()
-    
-    # 6. Report
-    print("\n" + "="*50)
+    return runner, config_path, universe, start_date, end_date
+
+
+def _render_and_write_outputs(
+    *,
+    args: argparse.Namespace,
+    result,
+    config_path: Path,
+    start_date: date,
+    end_date: date,
+    universe: set[str],
+) -> None:
+    # Report
+    print("\n" + "=" * 50)
     print("BACKTEST RESULTS")
-    print("="*50)
+    print("=" * 50)
     print(f"Total Return:   {result.metrics.total_return_pct:.2f}%")
     print(f"Max Drawdown:   {result.metrics.max_drawdown_pct:.2f}%")
     print(f"Win Rate:       {result.metrics.win_rate_pct:.2f}%")
@@ -113,13 +163,15 @@ def run_backtest(args: argparse.Namespace) -> None:
     if result.daily_equity_curve:
         print(f"Final Equity:   {result.daily_equity_curve[-1]:.2f}")
     else:
-        print(f"Final Equity:   {config.initial_capital:.2f}")
-    print("="*50)
-    
+        print("Final Equity:   n/a")
+    print("=" * 50)
+
     if result.trades:
         print("\nLast 5 Trades:")
         for t in result.trades[-5:]:
-            print(f"  {t.date} | {t.signal.name:4s} | {t.symbol:10s} | QTY: {t.quantity:4d} | PNL: {t.realized_pnl:.2f}")
+            print(
+                f"  {t.date} | {t.signal.name:4s} | {t.symbol:10s} | QTY: {t.quantity:4d} | PNL: {t.realized_pnl:.2f}"
+            )
 
     html_path = getattr(args, "html", None)
     if html_path:
@@ -155,6 +207,38 @@ def run_backtest(args: argparse.Namespace) -> None:
         )
 
 
+def run_backtest(args: argparse.Namespace) -> None:
+    """Run a backtest from a configuration file."""
+    runner, config_path, universe, start_date, end_date = _build_runner_from_args(
+        args, with_journal=False
+    )
+    result = runner.run()
+    _render_and_write_outputs(
+        args=args,
+        result=result,
+        config_path=config_path,
+        start_date=start_date,
+        end_date=end_date,
+        universe=universe,
+    )
+
+
+def run_paper(args: argparse.Namespace) -> None:
+    """Run forward-style paper simulation with persistent RunJournal."""
+    runner, config_path, universe, start_date, end_date = _build_runner_from_args(
+        args, with_journal=True
+    )
+    result = runner.run()
+    _render_and_write_outputs(
+        args=args,
+        result=result,
+        config_path=config_path,
+        start_date=start_date,
+        end_date=end_date,
+        universe=universe,
+    )
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Candlery Algorithmic Trading Platform")
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -175,11 +259,49 @@ def main() -> None:
         metavar="PATH_PREFIX",
         help="Write CSV bundle (<prefix>_summary/trades/equity.csv)",
     )
+
+    # Paper subcommand (Phase 3D)
+    paper_parser = subparsers.add_parser(
+        "paper", help="Run deterministic paper simulation with resume support"
+    )
+    paper_parser.add_argument("--config", required=True, help="Path to backtest YAML config")
+    paper_parser.add_argument("--data-dir", default="data", help="Directory containing Bhavcopy CSVs")
+    paper_parser.add_argument(
+        "--journal",
+        default=None,
+        metavar="PATH",
+        help="Path to run journal JSONL (default: reports/paper_<run_id>.jsonl)",
+    )
+    paper_parser.add_argument(
+        "--run-id",
+        default=None,
+        metavar="ID",
+        help="Logical run identifier used inside the journal",
+    )
+    paper_parser.add_argument(
+        "--resume",
+        action="store_true",
+        help="Resume from the latest completed day in the journal",
+    )
+    paper_parser.add_argument(
+        "--html",
+        default=None,
+        metavar="PATH",
+        help="Write static HTML tear sheet to this path after the run",
+    )
+    paper_parser.add_argument(
+        "--csv",
+        default=None,
+        metavar="PATH_PREFIX",
+        help="Write CSV bundle (<prefix>_summary/trades/equity.csv)",
+    )
     
     args = parser.parse_args()
     
     if args.command == "backtest":
         run_backtest(args)
+    elif args.command == "paper":
+        run_paper(args)
 
 if __name__ == "__main__":
     main()

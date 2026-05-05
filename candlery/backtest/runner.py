@@ -14,8 +14,10 @@ from candlery.core.candle import Candle
 from candlery.core.types import Signal, TradeAction
 from candlery.data.calendar import TradingCalendar
 from candlery.journal.store import ExecutedTrade
+from candlery.journal.run_journal import JournalState, PortfolioSnapshot, RunJournal
 from candlery.risk.engine import RiskEngine, RiskState
 from candlery.strategy.base import Strategy
+from candlery.runtime.scheduler import CalendarScheduler, Scheduler
 
 logger = logging.getLogger(__name__)
 
@@ -52,12 +54,21 @@ class BacktestRunner:
         importer: Any,  # BhavcopyImporter or generic data provider
         strategy: Strategy,
         risk_engine: RiskEngine,
+        *,
+        scheduler: Scheduler | None = None,
+        journal: RunJournal | None = None,
+        run_id: str = "default",
+        resume_from_journal: bool = False,
     ) -> None:
         self.config = config
         self.calendar = calendar
+        self.scheduler = scheduler or CalendarScheduler(calendar)
         self.importer = importer
         self.strategy = strategy
         self.risk_engine = risk_engine
+        self.journal = journal
+        self.run_id = run_id
+        self.resume_from_journal = resume_from_journal
         
         self.portfolio = Portfolio(
             initial_capital=config.initial_capital,
@@ -70,14 +81,59 @@ class BacktestRunner:
 
     def run(self) -> BacktestResult:
         """Execute the backtest loop from start_date to end_date."""
-        trading_days = self.calendar.trading_days_between(
+        trading_days = self.scheduler.trading_days_between(
             self.config.start_date, self.config.end_date
         )
+
+        completed_days: set[date] = set()
+        if self.journal is not None and self.resume_from_journal:
+            state = self.journal.load(run_id=self.run_id)
+            completed_days = set(state.completed_days)
+            self.portfolio.cash = state.portfolio_snapshot.cash
+            # Rehydrate positions into the portfolio.
+            self.portfolio.positions = dict(state.portfolio_snapshot.positions)
+            self.trades = list(state.trades)
+            self.daily_equity_curve = list(state.daily_equity_curve)
+        elif self.journal is not None:
+            completed_days = set()
 
         logger.info(f"Starting backtest: {len(trading_days)} trading days.")
 
         for day in trading_days:
+            if day in completed_days and self.journal is not None:
+                # Rebuild strategy history only (no execution, no journal duplication).
+                try:
+                    daily_data = self.importer.get_candles_for_date(
+                        day, self.config.universe
+                    )
+                except Exception as e:
+                    logger.error("Error loading data for %s (resume mode): %s", day, e)
+                    continue
+                if not daily_data:
+                    continue
+                for symbol, candle in daily_data.items():
+                    self.history[symbol].append(candle)
+                continue
+
+            trades_before = len(self.trades)
+            equity_before = len(self.daily_equity_curve)
+
             self._process_day(day)
+
+            # If we advanced the equity curve, we consider the day "completed".
+            if self.journal is not None and len(self.daily_equity_curve) > equity_before:
+                day_trades = self.trades[trades_before:]
+                daily_equity_value = self.daily_equity_curve[-1]
+                snapshot = PortfolioSnapshot(
+                    cash=self.portfolio.cash, positions=self.portfolio.positions
+                )
+                self.journal.append_day_completed(
+                    run_id=self.run_id,
+                    day=day,
+                    portfolio_snapshot=snapshot,
+                    trades=day_trades,
+                    daily_equity_value=daily_equity_value,
+                )
 
         logger.info("Backtest complete.")
         

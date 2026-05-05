@@ -51,3 +51,50 @@ def test_write_csv_bundle_creates_three_files(tmp_path: Path) -> None:
     assert "total_fees,0.500000" in summary_text
     assert "date,symbol,signal,quantity,price,realized_pnl,fees" in trades_text
     assert "index,equity,drawdown_pct" in equity_text
+
+
+def test_write_csv_bundle_is_reproducible_for_same_input(tmp_path: Path) -> None:
+    result = BacktestResult(
+        portfolio=Portfolio(initial_capital=1000.0),
+        trades=[
+            ExecutedTrade(
+                date=date(2026, 1, 1),
+                symbol="TEST",
+                signal=Signal.BUY,
+                quantity=5,
+                price=100.0,
+                realized_pnl=0.0,
+                fees=0.5,
+            ),
+            ExecutedTrade(
+                date=date(2026, 1, 2),
+                symbol="TEST",
+                signal=Signal.SELL,
+                quantity=5,
+                price=110.0,
+                realized_pnl=49.0,
+                fees=0.55,
+            ),
+        ],
+        daily_equity_curve=[1000.0, 1049.0],
+        metrics=BacktestMetrics(4.9, 0.0, 100.0, 1.0, 2),
+    )
+    out1 = write_csv_bundle(
+        tmp_path / "reports" / "run_a",
+        result,
+        title="run_a",
+        start_date=date(2026, 1, 1),
+        end_date=date(2026, 1, 2),
+        universe_size=1,
+    )
+    out2 = write_csv_bundle(
+        tmp_path / "reports" / "run_b",
+        result,
+        title="run_a",
+        start_date=date(2026, 1, 1),
+        end_date=date(2026, 1, 2),
+        universe_size=1,
+    )
+    assert out1["summary"].read_text(encoding="utf-8") == out2["summary"].read_text(encoding="utf-8")
+    assert out1["trades"].read_text(encoding="utf-8") == out2["trades"].read_text(encoding="utf-8")
+    assert out1["equity"].read_text(encoding="utf-8") == out2["equity"].read_text(encoding="utf-8")
