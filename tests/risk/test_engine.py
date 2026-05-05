@@ -54,6 +54,14 @@ class TestRiskEngine:
         assert result.signal == Signal.SELL
         assert result.quantity == 50
 
+    def test_sell_with_zero_qty_means_full_liquidation(self, engine: RiskEngine) -> None:
+        action = TradeAction(symbol="TEST", signal=Signal.SELL, quantity=0)
+        state = default_state(current_price=100.0, current_position_value=2350.0)
+        result = engine.evaluate(action, state)
+        assert result is not None
+        assert result.signal == Signal.SELL
+        assert result.quantity == 23
+
     def test_zero_price_rejects_buy(self, engine: RiskEngine) -> None:
         action = TradeAction(symbol="TEST", signal=Signal.BUY)
         result = engine.evaluate(action, default_state(current_price=0))

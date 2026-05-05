@@ -67,7 +67,18 @@ class RiskEngine:
         # Allow liquidations (SELL) without strict risk checks in Phase 1
         # since we want to be able to exit positions even if we are over limits.
         if action.signal == Signal.SELL:
-            return action
+            if action.quantity > 0:
+                return action
+            # Strategy may emit SELL without a quantity; interpret as full exit.
+            sell_qty = int(state.current_position_value / state.current_price)
+            if sell_qty <= 0:
+                return None
+            return TradeAction(
+                symbol=action.symbol,
+                signal=action.signal,
+                quantity=sell_qty,
+                reason=(action.reason + " [Risk Check: full liquidation]").strip(),
+            )
 
         # --- BUY Logic ---
 
