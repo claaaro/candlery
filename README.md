@@ -57,6 +57,25 @@ Backtest report outputs:
 - CSV bundle: `candlery backtest --config config/example_backtest.yaml --csv reports/run1`
   - writes `reports/run1_summary.csv`, `reports/run1_trades.csv`, `reports/run1_equity.csv`
 
+## End-of-Phase Validation Gate
+
+Before marking a phase complete, run this lightweight checklist:
+
+1. Code/test gate:
+   - `python3 -m pytest tests/ -q`
+   - `make phase1a-smoke` (or phase-equivalent smoke test)
+2. Baseline run with artifacts:
+   - run backtest with both `--html` and `--csv`
+3. One controlled variation:
+   - change one variable only (e.g., strategy parameter or cost setting)
+   - run again with a different report prefix
+4. Compare baseline vs variation:
+   - `total_trades`, `total_fees`, return, drawdown, and notable trade rows
+5. Record a short conclusion:
+   - better / worse / inconclusive and why
+
+Use this gate for system-validation confidence; do not infer production strategy quality from tiny/synthetic datasets.
+
 ## Commit Identity Guardrails
 
 Candlery enforces a single commit identity and blocks co-author/agent attribution text.

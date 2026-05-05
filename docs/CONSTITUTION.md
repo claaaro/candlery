@@ -43,3 +43,9 @@ Target scope includes:
 
 Rule: no implementation from a future phase is allowed until the current phase
 is verified complete by executable validation gates.
+
+Minimum phase validation gate:
+- Unit/integration tests green.
+- One baseline end-to-end run producing report artifacts.
+- One controlled variation run (single changed variable).
+- Outcome comparison and a written conclusion.
