@@ -1,6 +1,6 @@
 # Candlery — Current State
 
-**Last Updated:** 2026-05-02T00:00:00Z
+**Last Updated:** 2026-05-05T04:00:00Z
 **Last Platform:** Cursor
 **Current Phase:** Phase 1b — Reporting (HTML tear sheet)
 **Phase Status:** In progress
@@ -43,6 +43,7 @@
 
 - Corporate actions not handled (documented gap)
 - `float` used for prices (Decimal migration deferred to Phase 2)
+- If **Insights → Contributors** still shows a stale co-author after a history rewrite, the [contributors API](https://api.github.com/repos/claaaro/candlery/contributors) is authoritative (expect **claaaro** only); try a hard refresh or wait for GitHub’s graph cache ([discussion](https://github.com/orgs/community/discussions/186158)).
 
 ## Key Files
 
