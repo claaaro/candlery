@@ -1,9 +1,18 @@
 # Candlery — Current State
 
-**Last Updated:** 2026-05-05T17:58:00Z
+**Last Updated:** 2026-05-06T16:45:00Z
 **Last Platform:** Cursor
-**Current Phase:** Phase 3 — Operational Spine (paper-only)
-**Phase Status:** In progress (3A/3B/3C/3D implemented, closure doc sync pending)
+**Current Phase:** Phase 3 — Operational Spine (paper-only) — closed.
+                  Forward-protocol contract attempted and **invalidated** (statistically vacuous).
+                  Now: 3 small mechanisms (canary plumbing-only, signal-discovery template, audit rule).
+**Phase Status:** Awaiting deliberate next move — either register first signal candidate, or do nothing.
+
+## Active mechanisms (2026-05-06)
+
+- `docs/ai-state/CANARY_NOTE.md` — operational plumbing only. NOT started. Auto-dies in 10 trading days unless re-approved with concrete operational evidence + fresh signal-research artifact. Hard ceiling 60 days.
+- `docs/ai-state/SIGNAL_DISCOVERY_NOTE.md` — registration template. NO CANDIDATE REGISTERED.
+- `docs/ai-state/FORWARD_INTERPRETATION_CONTRACT.md` — INVALID (preserved as historical record). Discrimination test was statistically vacuous at N=3.
+- AUDIT RULE: any strategy claim must inline a path under `reports/signal_discovery/`. No path = no claim. Self-enforcing.
 
 ## Completed Tasks
 
@@ -41,9 +50,9 @@
 
 ## Next Priority
 
-1. Finalize Phase 3 closeout notes and usage docs for `candlery paper`.
-2. Curate repository hygiene (remove disposable research artifacts from tracking decisions).
-3. Hold strategy R&D stop policy on `data_real` unless explicit re-scope criteria are met.
+1. Phase 4 decision checkpoint: choose one path (pause / targeted data acquisition / paper-ops hardening).
+2. Keep strict stop policy on strategy R&D over `data_real` unless explicit re-scope criteria are approved.
+3. Maintain operational discipline: treat `candlery paper` as paper-only until a new edge passes strict gate.
 
 ## Architecture Summary
 

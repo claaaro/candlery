@@ -160,17 +160,18 @@ class BhavcopyImporter:
         start: date,
         end: date,
         symbols: set[str] | None = None,
+        file_glob: str = "*.csv",
     ) -> list[ImportResult]:
         """Import all CSV files in a directory for the given date range.
 
-        Scans for files matching *.csv and attempts to parse each one.
+        Scans files matching file_glob and attempts to parse each one.
         Only includes results for trading days within [start, end].
         """
         if not directory.is_dir():
             raise NotADirectoryError(f"Not a directory: {directory}")
 
         results: list[ImportResult] = []
-        for csv_path in sorted(directory.glob("*.csv")):
+        for csv_path in sorted(directory.glob(file_glob)):
             try:
                 result = self.import_file(csv_path, symbols=symbols)
                 if start <= result.date <= end:

@@ -117,6 +117,7 @@ def _build_runner_from_args(
         initial_capital=bt_params.get("initial_capital", 100000.0),
         universe=universe,
         cost_model=transaction_cost_model_from_mapping(bt_params.get("costs")),
+        close_all_at_end=bool(bt_params.get("close_all_at_end", False)),
     )
 
     runner_kwargs: dict[str, object] = {}

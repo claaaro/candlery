@@ -2,6 +2,7 @@
 
 Institutional-grade algorithmic trading platform under phased delivery:
 Backtest -> Reporting -> Complex Markets -> Forex -> Live Execution.
+AI agents: read `AGENTS.md` at repo root before taking any action.
 
 ## Current Scope
 

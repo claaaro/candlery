@@ -1,6 +1,6 @@
 # Task Queue
 
-**Last Updated:** 2026-05-05T18:00:00Z
+**Last Updated:** 2026-05-05T18:16:00Z
 
 ## Rules
 - Work top-to-bottom within each priority level
@@ -12,7 +12,7 @@
 
 | ID | Task | Deps | Status |
 |---|---|---|---|
-| P3-004 | Repo hygiene pass decision (keep/archive/delete disposable research artifacts) | — | READY |
+| P4-001 | Phase 4 direction decision (pause / data acquisition / paper-ops hardening) | — | READY |
 
 ## Completed
 
@@ -43,3 +43,4 @@
 | P3-001 | Execution seam (`ExecutionBackend`, `PaperExecutionBackend`) | 2026-05-05 | cursor |
 | P3-002 | Scheduler seam injected into `BacktestRunner` | 2026-05-05 | cursor |
 | P3-003 | RunJournal persistence + crash/resume + `candlery paper` CLI | 2026-05-05 | cursor |
+| P3-004 | Repo hygiene pass decision (keep/archive/delete disposable research artifacts) | 2026-05-05 | cursor |

@@ -70,6 +70,17 @@ class HistoryRecorderStrategy(Strategy):
         return None
 
 
+class BuyAndHoldStrategy(Strategy):
+    @property
+    def name(self) -> str:
+        return "BuyAndHold"
+
+    def evaluate(self, symbol: str, candles: list[Candle]) -> TradeAction | None:
+        if len(candles) == 1:
+            return TradeAction(symbol=symbol, signal=Signal.BUY, quantity=10)
+        return None
+
+
 @pytest.fixture
 def risk_engine() -> RiskEngine:
     config = {
@@ -268,3 +279,32 @@ class TestBacktestRunner:
         # AlwaysBuyStrategy buys 10 shares per processed day.
         assert result.portfolio.positions["TEST"].quantity == 20
         assert len(result.trades) == 2
+
+    def test_close_all_at_end_forces_final_liquidation(self, risk_engine: RiskEngine) -> None:
+        data = {
+            date(2026, 1, 1): {"TEST": make_candle(1, 100.0)},
+            date(2026, 1, 2): {"TEST": make_candle(2, 110.0)},
+        }
+        config = BacktestConfig(
+            start_date=date(2026, 1, 1),
+            end_date=date(2026, 1, 2),
+            initial_capital=10000.0,
+            universe={"TEST"},
+            close_all_at_end=True,
+        )
+        runner = BacktestRunner(
+            config=config,
+            calendar=MockTradingCalendar(),
+            importer=MockDataImporter(data),
+            strategy=BuyAndHoldStrategy(),
+            risk_engine=risk_engine,
+        )
+        result = runner.run()
+
+        # Buy day 1 at 100, forced SELL day 2 at 110.
+        assert result.portfolio.positions["TEST"].quantity == 0
+        assert result.portfolio.cash == pytest.approx(10100.0)
+        sells = [t for t in result.trades if t.signal == Signal.SELL]
+        assert len(sells) == 1
+        assert sells[0].date == date(2026, 1, 2)
+        assert sells[0].realized_pnl == pytest.approx(100.0)

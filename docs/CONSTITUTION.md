@@ -1,6 +1,7 @@
 # Candlery Constitution
 
 This document defines the stable architecture and scope boundaries.
+For AI behavior rules and session boot ritual, see `AGENTS.md` at repo root.
 
 ## Grand Vision
 

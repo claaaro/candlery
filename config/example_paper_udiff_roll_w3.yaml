@@ -1,0 +1,15 @@
+backtest:
+  name: paper_udiff_roll_w3
+  strategy: sma_crossover
+  universe: nifty50
+  start_date: "2026-03-11"
+  end_date: "2026-03-24"
+  exchange: NSE
+  timeframe: 1d
+  risk_profile: risk
+  initial_capital: 500000
+  close_all_at_end: true
+
+strategy_params:
+  fast_period: 2
+  slow_period: 4
